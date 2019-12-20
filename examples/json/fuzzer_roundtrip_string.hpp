@@ -12,28 +12,23 @@ class fuzzer_roundtrip_string : public fuzzcover::fuzzcover_interface<std::tuple
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
     {
-        std::string result(data, data + size);
+        FuzzedDataProvider data_provider(data, size);
 
-        bool ensure_ascii = false;
-        nlohmann::detail::error_handler_t error_handler = nlohmann::detail::error_handler_t::ignore;
+        const auto ensure_ascii = data_provider.ConsumeBool();
+        const auto error_handler_int = data_provider.ConsumeIntegralInRange(0,2);
+        const auto result = data_provider.ConsumeRemainingBytesAsString();
 
-        if (size > 0)
-        {
-            ensure_ascii = data[0] % 2;
-
-            switch (data[0] % 3)
+        nlohmann::json::error_handler_t error_handler = [error_handler_int]() {
+            switch (error_handler_int)
             {
                 case 0:
-                    error_handler = nlohmann::detail::error_handler_t::ignore;
-                    break;
+                    return nlohmann::detail::error_handler_t::ignore;
                 case 1:
-                    error_handler = nlohmann::detail::error_handler_t::replace;
-                    break;
-                case 2:
-                    error_handler = nlohmann::detail::error_handler_t::strict;
-                    break;
+                    return nlohmann::detail::error_handler_t::replace;
+                default:
+                    return nlohmann::detail::error_handler_t::strict;
             }
-        }
+        }();
 
         return {result, error_handler, ensure_ascii};
     }

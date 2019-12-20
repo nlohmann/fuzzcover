@@ -8,6 +8,7 @@
 #include <type_traits>
 #include <vector>
 #include <nlohmann/json.hpp>
+#include "FuzzedDataProvider.h"
 
 namespace fuzzcover {
 

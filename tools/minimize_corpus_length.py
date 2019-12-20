@@ -13,11 +13,17 @@ def get_coverage():
     state['coverage_calls'] += 1
     start_time = time.time()
 
-    output = subprocess.check_output(["make", "check_coverage_fast"])
-    for line in output.decode("utf-8").splitlines():
-        if 'lines..' in line:
-            state['coverage_time'] += time.time() - start_time
-            return int(line.split(' ')[4][1:])
+    try:
+        output = subprocess.check_output(["make", "check_coverage_fast"], stderr=subprocess.STDOUT)
+        for line in output.decode("utf-8").splitlines():
+            if line.startswith('TOTAL'):
+                state['coverage_time'] += time.time() - start_time
+                _, _, _, _, _, _, _, lines, missed_lines, _ = line.split()
+                return int(lines) - int(missed_lines)
+
+    except subprocess.CalledProcessError:
+        # call failed, because tests were run on empty corpus
+        return 0
 
 
 if __name__ == '__main__':
@@ -44,6 +50,19 @@ if __name__ == '__main__':
             filename=filename,
             file_size=file_size
         ))
+
+        # iteratively add bytes, starting from 1
+        #new_file_size = 0
+        #while new_file_size != file_size:
+        #    # write truncated file
+        #    new_file_size += 1
+        #    open(source_path, 'wb').write(file_content[0:new_file_size])
+
+        #    # determine new coverage
+        #    new_line_coverage = get_coverage()
+
+        #    if new_line_coverage == line_coverage:
+        #        break
 
         # iteratively remove bytes
         while file_size > 1:

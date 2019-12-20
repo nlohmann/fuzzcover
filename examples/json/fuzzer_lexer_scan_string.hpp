@@ -12,7 +12,8 @@ class fuzzer_lexer_scan_string : public fuzzcover::fuzzcover_interface<std::stri
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
     {
-        test_input_t result(data, data + size);
+        FuzzedDataProvider data_provider(data, size);
+        test_input_t result = data_provider.ConsumeRemainingBytesAsString();
 
         if (!result.empty())
         {

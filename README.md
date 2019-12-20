@@ -32,14 +32,13 @@ Folder `examples` contains several example implementations that generate tests f
 
 - [Clang](http://clang.llvm.org)
 - [libFuzzer](http://libfuzzer.info)
-- [lcov](http://ltp.sourceforge.net/coverage/lcov.php) (to check coverage)
 - [Python](https://www.python.org) (for helper scripts that reduce the test suite's size)
 
 ## Roadmap
 
 - [ ] generate an actual test suite (e.g., for [Catch](https://github.com/catchorg/Catch2) or [ApprovalTests.cpp](https://github.com/approvals/ApprovalTests.cpp)
 - [ ] improve scripts to accelerate corpus reduction (e.g., using binary search)
-- [ ] remove lcov dependency
+- [x] remove lcov dependency
 - [ ] add CI
 - [ ] add tutorial
 

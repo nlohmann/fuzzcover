@@ -12,14 +12,8 @@ class fuzzer_serializer_dump_integer : public fuzzcover::fuzzcover_interface<std
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
     {
-        std::int64_t result = 0;
-
-        if (size >= sizeof(std::int64_t))
-        {
-            std::memcpy(&result, data, sizeof(std::int64_t));
-        }
-
-        return result;
+        FuzzedDataProvider data_provider(data, size);
+        return data_provider.ConsumeIntegral<std::int64_t>();
     }
 
     void test_function(const test_input_t& value) override

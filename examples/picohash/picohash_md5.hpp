@@ -2,12 +2,10 @@
 
 #define private public
 
-#include <cmath>
-#include <cstring>
 #include <fuzzcover/fuzzcover.hpp>
-#include <nlohmann/json.hpp>
+#include "picohash.h"
 
-class fuzzer_lexer_scan : public fuzzcover::fuzzcover_interface<std::string>
+class picohash_md5 : public fuzzcover::fuzzcover_interface<std::string>
 {
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
@@ -18,14 +16,11 @@ class fuzzer_lexer_scan : public fuzzcover::fuzzcover_interface<std::string>
 
     void test_function(const test_input_t& value) override
     {
-        if (value.empty())
-        {
-            return;
-        }
+        picohash_ctx_t ctx;
+        char digest[PICOHASH_MD5_DIGEST_LENGTH];
 
-        nlohmann::detail::input_adapter ia(value.data(), value.size());
-        nlohmann::detail::lexer<nlohmann::json> l(ia);
-        l.get();
-        l.scan();
+        picohash_init_md5(&ctx);
+        picohash_update(&ctx, value.c_str(), value.size());
+        picohash_final(&ctx, digest);
     }
 };

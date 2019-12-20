@@ -12,14 +12,8 @@ class fuzzer_serializer_dump_float : public fuzzcover::fuzzcover_interface<doubl
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
     {
-        double result = 0;
-
-        if (size >= sizeof(double))
-        {
-            std::memcpy(&result, data, sizeof(double));
-        }
-
-        return result;
+        FuzzedDataProvider data_provider(data, size);
+        return data_provider.ConsumeFloatingPoint<double>();
     }
 
     void test_function(const test_input_t& value) override

@@ -13,28 +13,24 @@ class fuzzer_serializer_dump_escaped : public fuzzcover::fuzzcover_interface<std
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
     {
-        bool ensure_ascii = false;
-        nlohmann::detail::error_handler_t error_handler = nlohmann::detail::error_handler_t::ignore;
+        FuzzedDataProvider data_provider(data, size);
+        const auto ensure_ascii = data_provider.ConsumeBool();
+        const auto error_handler_int = data_provider.ConsumeIntegralInRange<std::uint8_t>(0, 2);
+        const auto str = data_provider.ConsumeRemainingBytesAsString();
 
-        if (size > 0)
-        {
-            ensure_ascii = data[0] % 2;
-
-            switch (data[0] % 3)
+        nlohmann::detail::error_handler_t error_handler = [error_handler_int] {
+            switch (error_handler_int)
             {
                 case 0:
-                    error_handler = nlohmann::detail::error_handler_t::ignore;
-                    break;
+                    return nlohmann::detail::error_handler_t::ignore;
                 case 1:
-                    error_handler = nlohmann::detail::error_handler_t::replace;
-                    break;
-                case 2:
-                    error_handler = nlohmann::detail::error_handler_t::strict;
-                    break;
+                    return nlohmann::detail::error_handler_t::replace;
+                default:
+                    return nlohmann::detail::error_handler_t::strict;
             }
-        }
+        }();
 
-        return {std::string(reinterpret_cast<const char*>(data), size), ensure_ascii, error_handler};
+        return {str, ensure_ascii, error_handler};
     }
 
     void test_function(const test_input_t& value) override

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.15)
 
-project(fuzzcover VERSION 0.1.0 LANGUAGES CXX)
+project(fuzzcover VERSION 0.2.0 LANGUAGES CXX)
 
 # the actual library
 add_library(libfuzzcover INTERFACE)
@@ -10,19 +10,19 @@ target_compile_features(libfuzzcover INTERFACE cxx_std_11)
 ##############################################################################
 
 # binary that does the actual fuzzing
-add_executable(fuzzer examples/json/fuzzer.cpp)
+add_executable(fuzzer examples/fuzzer.cpp)
 target_include_directories(fuzzer PRIVATE examples/json/include)
 target_compile_options(fuzzer PRIVATE -fsanitize=fuzzer-no-link)
 target_link_libraries(fuzzer PRIVATE -fsanitize=fuzzer libfuzzcover)
 
 # binary that executes the test function with the corpus
-add_executable(tester examples/json/tester.cpp)
+add_executable(tester examples/tester.cpp)
 target_include_directories(tester PRIVATE examples/json/include)
 target_compile_options(tester PRIVATE -g -O1 -fprofile-instr-generate -fcoverage-mapping)
 target_link_libraries(tester PRIVATE -fprofile-instr-generate -fcoverage-mapping libfuzzcover)
 
 # binary that dumps the corpus in JSON format
-add_executable(dumper examples/json/dumper.cpp)
+add_executable(dumper examples/dumper.cpp)
 target_include_directories(dumper PRIVATE examples/json/include)
 target_link_libraries(dumper PRIVATE libfuzzcover)
 
@@ -60,21 +60,24 @@ add_custom_target(check_coverage
     COMMAND llvm-profdata merge -sparse default.profraw -o default.profdata
     COMMAND llvm-cov report ./tester -instr-profile=default.profdata
     COMMAND llvm-cov show ./tester -instr-profile=default.profdata --format=html > coverage.html
+
     COMMAND llvm-cov export ./tester -instr-profile=default.profdata --format=lcov > coverage.info
     COMMAND lcov --summary coverage.info
     COMMAND genhtml coverage.info -o html
+
+    COMMAND rm -f default.profdata default.profraw
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "collect coverage fuzzer"
+    COMMENT "collect coverage"
 )
 add_dependencies(check_coverage tester)
 
 add_custom_target(check_coverage_fast
     COMMAND tester ${CORPUS_DIRECTORY}/*
     COMMAND llvm-profdata merge -sparse default.profraw -o default.profdata
-    COMMAND llvm-cov export ./tester -instr-profile=default.profdata --format=lcov > coverage.info
-    COMMAND lcov --summary coverage.info
+    COMMAND llvm-cov report ./tester -instr-profile=default.profdata
+    COMMAND rm -f default.profdata default.profraw
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "collect coverage fuzzer"
+    COMMENT "collect coverage"
 )
 add_dependencies(check_coverage_fast tester)
 

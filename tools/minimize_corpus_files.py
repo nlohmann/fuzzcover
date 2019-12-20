@@ -15,11 +15,17 @@ def get_coverage():
     state['coverage_calls'] += 1
     start_time = time.time()
 
-    output = subprocess.check_output(["make", "check_coverage_fast"])
-    for line in output.decode("utf-8").splitlines():
-        if 'lines..' in line:
-            state['coverage_time'] += time.time() - start_time
-            return int(line.split(' ')[4][1:])
+    try:
+        output = subprocess.check_output(["make", "check_coverage_fast"], stderr=subprocess.STDOUT)
+        for line in output.decode("utf-8").splitlines():
+            if line.startswith('TOTAL'):
+                state['coverage_time'] += time.time() - start_time
+                _, _, _, _, _, _, _, lines, missed_lines, _ = line.split()
+                return int(lines) - int(missed_lines)
+
+    except subprocess.CalledProcessError:
+        # call failed, because tests were run on empty corpus
+        return 0
 
 
 if __name__ == '__main__':
