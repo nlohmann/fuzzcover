@@ -65,7 +65,6 @@ add_custom_target(check_coverage
     COMMAND lcov --summary coverage.info
     COMMAND genhtml coverage.info -o html
 
-    COMMAND rm -f default.profdata default.profraw
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "collect coverage"
 )
@@ -75,7 +74,6 @@ add_custom_target(check_coverage_fast
     COMMAND tester ${CORPUS_DIRECTORY}/*
     COMMAND llvm-profdata merge -sparse default.profraw -o default.profdata
     COMMAND llvm-cov report ./tester -instr-profile=default.profdata
-    COMMAND rm -f default.profdata default.profraw
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
     COMMENT "collect coverage"
 )
