@@ -4,12 +4,13 @@ import os
 import subprocess
 import sys
 import time
+from typing import Tuple
 
 
 state = {'coverage_calls': 0, 'coverage_time': 0.0}
 
 
-def get_coverage():
+def get_coverage() -> Tuple[int, int]:
     state['coverage_calls'] += 1
     start_time = time.time()
 
@@ -18,12 +19,12 @@ def get_coverage():
         for line in output.decode("utf-8").splitlines():
             if line.startswith('TOTAL'):
                 state['coverage_time'] += time.time() - start_time
-                _, _, _, _, _, _, _, lines, missed_lines, _ = line.split()
-                return int(lines) - int(missed_lines)
+                _, _, _, _, _, _, _, lines, missed_lines, _, branches, missed_branches, _ = line.split()
+                return int(lines) - int(missed_lines), int(branches) - int(missed_branches)
 
     except subprocess.CalledProcessError:
         # call failed, because tests were run on empty corpus
-        return 0
+        return 0, 0
 
 
 if __name__ == '__main__':
