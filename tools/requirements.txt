@@ -1,0 +1,2 @@
+PyInquirer>=1.0.3
+tqdm>=4.61.0
