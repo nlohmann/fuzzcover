@@ -153,9 +153,13 @@ def show_coverage():
         subprocess.check_output([FUZZCOVER_BINARY, "--test", CORPUS_DIRECTORY], env=env)
         subprocess.check_output(['llvm-profdata', 'merge', '-sparse', profraw_file, '-o', profdata_file])
         with open(info_file, "wb") as info_output:
-            subprocess.Popen(['llvm-cov', 'export', FUZZCOVER_BINARY, '-instr-profile=' + profdata_file, '--format=lcov'], stdout=info_output)
-        subprocess.check_output(['genhtml', '--branch-coverage', info_file, '--output-directory', CORPUS_DIRECTORY + '_coverage'])
-        webbrowser.get().open_new('file://' + os.path.realpath(os.path.join(CORPUS_DIRECTORY + '_coverage', 'index.html')))
+            subprocess.Popen(
+                ['llvm-cov', 'export', FUZZCOVER_BINARY, '-instr-profile=' + profdata_file, '--format=lcov'],
+                stdout=info_output)
+        subprocess.check_output(
+            ['genhtml', '--branch-coverage', info_file, '--output-directory', CORPUS_DIRECTORY + '_coverage'])
+        webbrowser.get().open_new(
+            'file://' + os.path.realpath(os.path.join(CORPUS_DIRECTORY + '_coverage', 'index.html')))
 
 
 def fuzz():
@@ -226,9 +230,9 @@ def overview():
         print('Corpus: {name}, {files} files ({diff_files:+d}), {bytes} bytes ({diff_bytes:+d})'.format(
             name=CORPUS_DIRECTORY,
             files=corpus_files,
-            diff_files=corpus_files-LAST_CORPUS_SIZE[0],
+            diff_files=corpus_files - LAST_CORPUS_SIZE[0],
             bytes=corpus_bytes,
-            diff_bytes=corpus_bytes-LAST_CORPUS_SIZE[1]
+            diff_bytes=corpus_bytes - LAST_CORPUS_SIZE[1]
         ))
     else:
         print('Corpus: {name}, {files} files, {bytes} bytes'.format(
@@ -240,7 +244,7 @@ def overview():
     line, branch = check_coverage(CORPUS_DIRECTORY)
     if LAST_COVERAGE:
         print('Coverage: {line} lines ({diff_lines:+d}), {branch} branches ({diff_branches:+d})'.format(
-            line=line, branch=branch, diff_lines=line-LAST_COVERAGE[0], diff_branches=branch-LAST_COVERAGE[1]
+            line=line, branch=branch, diff_lines=line - LAST_COVERAGE[0], diff_branches=branch - LAST_COVERAGE[1]
         ))
     else:
         print('Coverage: {line} lines, {branch} branches'.format(line=line, branch=branch))
