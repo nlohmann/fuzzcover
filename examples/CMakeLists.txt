@@ -37,6 +37,8 @@ target_link_libraries(fuzzer_ramer_douglas_peucker PRIVATE libfuzzcover)
 add_executable(fuzzer_iban iban/iban_fuzz.cpp)
 target_link_libraries(fuzzer_iban PRIVATE libfuzzcover)
 
+# Spell Number
+
 add_executable(fuzzer_spellnumber spellnumber/spell_number_fuzz.cpp)
 target_link_libraries(fuzzer_spellnumber PRIVATE libfuzzcover)
 
