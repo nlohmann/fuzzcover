@@ -1,32 +1,42 @@
 #!/usr/bin/env python3
 
+import argparse
 import glob
 import os
 import shutil
 import sys
 import subprocess
 import tempfile
-from typing import Tuple
-from PyInquirer import prompt, Separator
+from typing import Optional
+from PyInquirer import prompt
 from tqdm import tqdm
 import webbrowser
+from collections import namedtuple
+
+CorpusSize = namedtuple('CorpusSize', ['files', 'bytes'])
+CoverageInformation = namedtuple('CoverageInformation', ['lines', 'branches'])
 
 CORPUS_DIRECTORY = 'corpus'
 FUZZCOVER_BINARY = ''
-LAST_COVERAGE = None
-LAST_CORPUS_SIZE = None
+LAST_COVERAGE = None  # type: Optional[CoverageInformation]
+LAST_CORPUS_SIZE = None  # type: Optional[CorpusSize]
 
 
 def reduce_files_additive():
+    """
+    find a subset of the corpus with the same coverage
+    """
     full_coverage = check_coverage(CORPUS_DIRECTORY)
-    last_coverage = (0, 0)
+    last_coverage = CoverageInformation(lines=0, branches=0)
     removed_files = 0
-    files = glob.glob(os.path.join(CORPUS_DIRECTORY, '*'))
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tqdm(total=len(files), unit="files", leave=False) as pbar:
-            pbar.set_description('pass 1 (additive)   ')
+        # prefer small files by checking them first
+        files = sorted(glob.glob(os.path.join(CORPUS_DIRECTORY, '*')), key=lambda file: os.path.getsize(file))
+
+        with tqdm(total=len(files), unit="files", leave=False, desc='pass 1 (additive)   ') as pbar:
             for file in files:
+                # copy file to new corpus directory and check coverage
                 shutil.copy(file, temp_dir)
                 new_coverage = check_coverage(temp_dir)
                 pbar.update(1)
@@ -34,10 +44,12 @@ def reduce_files_additive():
                 if new_coverage > last_coverage:
                     last_coverage = new_coverage
                 else:
+                    # coverage did not improve: remove the current file
                     removed_files += 1
                     pbar.set_postfix(reduction=removed_files)
                     os.remove(os.path.join(temp_dir, os.path.basename(file)))
 
+                # maximal coverage reached: we can skip all remaining files
                 if new_coverage == full_coverage:
                     shutil.rmtree(CORPUS_DIRECTORY)
                     shutil.move(temp_dir, CORPUS_DIRECTORY)
@@ -47,13 +59,15 @@ def reduce_files_additive():
 
 
 def reduce_files_subtractive():
+    """
+    remove files from the corpus while preserving coverage
+    """
     full_coverage = check_coverage(CORPUS_DIRECTORY)
-    files = glob.glob(os.path.join(CORPUS_DIRECTORY, '*'))
     removed_files = 0
 
     with tempfile.TemporaryDirectory() as temp_dir:
-        with tqdm(total=len(files), unit="files", leave=False) as pbar:
-            pbar.set_description('pass 2 (subtractive)')
+        files = glob.glob(os.path.join(CORPUS_DIRECTORY, '*'))
+        with tqdm(total=len(files), unit="files", leave=False, desc='pass 2 (subtractive)') as pbar:
             for file in files:
                 shutil.move(file, temp_dir)
                 new_coverage = check_coverage(CORPUS_DIRECTORY)
@@ -67,23 +81,20 @@ def reduce_files_subtractive():
 
 
 def reduce_file_length():
-    corpus_size_without_reduction = 0
+    """
+    reduce the file lengths of the corpus while preserving coverage
+    """
     bytes_saved_by_reduction = 0
-    files = os.listdir(CORPUS_DIRECTORY)
+    current_coverage = check_coverage(CORPUS_DIRECTORY)
 
-    with tqdm(total=corpus_size()[1], unit="bytes", leave=False) as pbar:
-        pbar.set_description('pass 3 (size)       ')
+    with tqdm(total=corpus_size().bytes, unit="bytes", leave=False, desc='pass 3 (size)       ') as pbar:
+        files = os.listdir(CORPUS_DIRECTORY)
         for filename in files:
-            source_path = os.path.join(CORPUS_DIRECTORY, filename)
-
-            # determine coverage
-            line_coverage = check_coverage(CORPUS_DIRECTORY)
-
             # read content
+            source_path = os.path.join(CORPUS_DIRECTORY, filename)
             file_content = open(source_path, 'rb').read()
             file_size = len(file_content)
             original_size = file_size
-            corpus_size_without_reduction += file_size
             reduction = 0
 
             # iteratively remove bytes
@@ -93,9 +104,9 @@ def reduce_file_length():
                 open(source_path, 'wb').write(file_content[0:new_file_size])
 
                 # determine new coverage
-                new_line_coverage = check_coverage(CORPUS_DIRECTORY)
+                new_coverage = check_coverage(CORPUS_DIRECTORY)
 
-                if new_line_coverage < line_coverage:
+                if new_coverage < current_coverage:
                     # restore file content
                     open(source_path, 'wb').write(file_content[0:file_size])
                     break
@@ -110,7 +121,12 @@ def reduce_file_length():
             pbar.update(original_size - reduction)
 
 
-def check_coverage(corpus_directory: str) -> Tuple[int, int]:
+def check_coverage(corpus_directory: str) -> CoverageInformation:
+    """
+    calculate coverage information
+    :param corpus_directory: directory to use as input for the fuzzcover binary
+    :return: line and branch coverage
+    """
     with tempfile.TemporaryDirectory() as temp_dir:
         profraw_file = os.path.join(temp_dir, 'coverage.profraw')
         profdata_file = os.path.join(temp_dir, 'coverage.profdata')
@@ -123,10 +139,14 @@ def check_coverage(corpus_directory: str) -> Tuple[int, int]:
         for line in output.decode("utf-8").splitlines():
             if line.startswith('TOTAL'):
                 _, _, _, _, _, _, _, lines, missed_lines, _, branches, missed_branches, _ = line.split()
-                return int(lines) - int(missed_lines), int(branches) - int(missed_branches)
+                return CoverageInformation(lines=int(lines) - int(missed_lines),
+                                           branches=int(branches) - int(missed_branches))
 
 
 def merge_corpus():
+    """
+    call merge option from libfuzz to remove some unneeded corpus files
+    """
     with tempfile.TemporaryDirectory() as temp_dir:
         env = dict(os.environ, LLVM_PROFILE_FILE=os.path.join(temp_dir, 'default.profraw'))
         subprocess.check_output([FUZZCOVER_BINARY, "--fuzz", temp_dir, CORPUS_DIRECTORY, '-merge=1'],
@@ -137,6 +157,9 @@ def merge_corpus():
 
 
 def dump():
+    """
+    dump corpus content to standard output
+    """
     with tempfile.TemporaryDirectory() as temp_dir:
         env = dict(os.environ, LLVM_PROFILE_FILE=os.path.join(temp_dir, 'default.profraw'))
         call = [FUZZCOVER_BINARY, '--dump', '.']
@@ -144,6 +167,9 @@ def dump():
 
 
 def show_coverage():
+    """
+    create coverage report and open it in default browser
+    """
     with tempfile.TemporaryDirectory() as temp_dir:
         profraw_file = os.path.join(temp_dir, 'coverage.profraw')
         profdata_file = os.path.join(temp_dir, 'coverage.profdata')
@@ -163,6 +189,9 @@ def show_coverage():
 
 
 def fuzz():
+    """
+    ask for fuzzing options and execute fuzzcover binary
+    """
     questions = [
         {
             'type': 'input',
@@ -190,7 +219,6 @@ def fuzz():
         }
     ]
     answers = prompt(questions)
-    print(answers)
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -200,19 +228,27 @@ def fuzz():
                     '-runs=' + answers['runs'],
                     '-only_ascii=1' if answers['only_ascii'] else '-only_ascii=0',
                     '-max_len=' + answers['max_len']]
+            print(' '.join(call))
             subprocess.run(call, env=env)
     except KeyboardInterrupt:
         return
 
 
-def corpus_size() -> Tuple[int, int]:
+def corpus_size() -> CorpusSize:
+    """
+    determine corpus size
+    :return: number of files and bytes of corpus
+    """
     total_size = 0
     for file in os.listdir(CORPUS_DIRECTORY):
         total_size += os.path.getsize(os.path.join(CORPUS_DIRECTORY, file))
-    return len(os.listdir(CORPUS_DIRECTORY)), total_size
+    return CorpusSize(files=len(os.listdir(CORPUS_DIRECTORY)), bytes=total_size)
 
 
 def overview():
+    """
+    display program banner with corpus and coverage information
+    """
     global LAST_COVERAGE
     global LAST_CORPUS_SIZE
 
@@ -225,36 +261,42 @@ def overview():
 
     print('Fuzzcover binary:', os.path.relpath(FUZZCOVER_BINARY))
 
-    corpus_files, corpus_bytes = corpus_size()
+    current_corpus_size = corpus_size()
     if LAST_CORPUS_SIZE:
         print('Corpus: {name}, {files} files ({diff_files:+d}), {bytes} bytes ({diff_bytes:+d})'.format(
             name=CORPUS_DIRECTORY,
-            files=corpus_files,
-            diff_files=corpus_files - LAST_CORPUS_SIZE[0],
-            bytes=corpus_bytes,
-            diff_bytes=corpus_bytes - LAST_CORPUS_SIZE[1]
+            files=current_corpus_size.files,
+            diff_files=current_corpus_size.files - LAST_CORPUS_SIZE.files,
+            bytes=current_corpus_size.bytes,
+            diff_bytes=current_corpus_size.bytes - LAST_CORPUS_SIZE.bytes
         ))
     else:
         print('Corpus: {name}, {files} files, {bytes} bytes'.format(
             name=CORPUS_DIRECTORY,
-            files=corpus_files,
-            bytes=corpus_bytes
+            files=current_corpus_size.files,
+            bytes=current_corpus_size.bytes
         ))
 
-    line, branch = check_coverage(CORPUS_DIRECTORY)
+    current_coverage = check_coverage(CORPUS_DIRECTORY)
     if LAST_COVERAGE:
         print('Coverage: {line} lines ({diff_lines:+d}), {branch} branches ({diff_branches:+d})'.format(
-            line=line, branch=branch, diff_lines=line - LAST_COVERAGE[0], diff_branches=branch - LAST_COVERAGE[1]
+            line=current_coverage.lines, branch=current_coverage.branches,
+            diff_lines=current_coverage.lines - LAST_COVERAGE.lines,
+            diff_branches=current_coverage.branches - LAST_COVERAGE.branches
         ))
     else:
-        print('Coverage: {line} lines, {branch} branches'.format(line=line, branch=branch))
+        print('Coverage: {line} lines, {branch} branches'.format(line=current_coverage.lines,
+                                                                 branch=current_coverage.branches))
     print()
 
-    LAST_COVERAGE = line, branch
-    LAST_CORPUS_SIZE = corpus_files, corpus_bytes
+    LAST_COVERAGE = current_coverage
+    LAST_CORPUS_SIZE = current_corpus_size
 
 
 def main_menu():
+    """
+    display main menu and call selected functions
+    """
     questions = [
         {
             'type': 'list',
@@ -304,13 +346,17 @@ def main_menu():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) not in [2, 3]:
-        print('Usage: fuzzcover.py FUZZER_BINARY [CORPUS_DIRECTORY]')
-        sys.exit(1)
+    parser = argparse.ArgumentParser(description="Fuzzcover")
+    parser.add_argument('binary', metavar='FUZZER_BINARY', type=str, help='The binary linked to the fuzzcover library.')
+    parser.add_argument('corpus', metavar='CORPUS_DIRECTORY', type=str, nargs='?',
+                        help='The directory of the corpus. If not provided, the name of the corpus directory will be '
+                             'derived from the name of the fuzzer binary. The directory will be created if it does not '
+                             'exist.')
+    args = parser.parse_args()
 
     # process command line parameters
-    FUZZCOVER_BINARY = os.path.abspath(sys.argv[1])
-    CORPUS_DIRECTORY = sys.argv[2] if len(sys.argv) == 3 else os.path.basename(FUZZCOVER_BINARY) + '_corpus'
+    FUZZCOVER_BINARY = os.path.abspath(args.binary)
+    CORPUS_DIRECTORY = args.corpus if args.corpus else os.path.basename(FUZZCOVER_BINARY) + '_corpus'
 
     # create corpus directory if it does not exist
     if not os.path.isdir(CORPUS_DIRECTORY):
