@@ -4,12 +4,12 @@
 #include <cstddef>              // size_t
 #include <cstdint>              // uint8_t
 #include <cstdlib>              // EXIT_SUCCESS, EXIT_FAILURE, exit
-#include <dirent.h>
-#include <fstream>           // istream_iterator
-#include <iostream>          // cerr, endl
-#include <string>            // string
-#include <vector>            // vector
-#include <nlohmann/json.hpp> // nlohmann::json
+#include <dirent.h>             // readdir, opendir
+#include <fstream>              // istream_iterator
+#include <iostream>             // cerr, endl
+#include <string>               // string
+#include <vector>               // vector
+#include <nlohmann/json.hpp>    // nlohmann::json
 
 // entry point for libfuzzer
 extern "C" int LLVMFuzzerRunDriver(int* argc, char*** argv, int (*UserCb)(const uint8_t* Data, size_t Size));
