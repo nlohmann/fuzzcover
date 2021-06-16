@@ -12,6 +12,7 @@ from PyInquirer import prompt
 from tqdm import tqdm
 import webbrowser
 from collections import namedtuple
+import colorful as cf
 
 CorpusSize = namedtuple('CorpusSize', ['files', 'bytes'])
 CoverageInformation = namedtuple('CoverageInformation', ['lines', 'branches'])
@@ -245,6 +246,14 @@ def corpus_size() -> CorpusSize:
     return CorpusSize(files=len(os.listdir(CORPUS_DIRECTORY)), bytes=total_size)
 
 
+def format_integer(i: int) -> str:
+    s = '{i:+d}'.format(i=i)
+    if i == 0:
+        return s
+    else:
+        return cf.bold_white(s)
+
+
 def overview():
     """
     display program banner with corpus and coverage information
@@ -252,23 +261,26 @@ def overview():
     global LAST_COVERAGE
     global LAST_CORPUS_SIZE
 
-    print(''' _____                                     ''')
-    print('''|  ___|   _ ___________ _____   _____ _ __ ''')
-    print('''| |_ | | | |_  /_  / __/ _ \ \ / / _ \ '__|''')
-    print('''|  _|| |_| |/ / / / (_| (_) \ V /  __/ |   ''')
-    print('''|_|   \__,_/___/___\___\___/ \_/ \___|_|   ''')
-    print('''                                           ''')
+    print(cf.bold_orange(''' _____                                     '''))
+    print(cf.bold_orange('''|  ___|   _ ___________ _____   _____ _ __ '''))
+    print(cf.bold_orange('''| |_ | | | |_  /_  / __/ _ \ \ / / _ \ '__|'''))
+    print(cf.bold_orange('''|  _|| |_| |/ / / / (_| (_) \ V /  __/ |   '''))
+    print(cf.bold_orange('''|_|   \__,_/___/___\___\___/ \_/ \___|_|   '''))
+    print(cf.bold_orange('''                                           '''))
 
     print('Fuzzcover binary:', os.path.relpath(FUZZCOVER_BINARY))
 
     current_corpus_size = corpus_size()
     if LAST_CORPUS_SIZE:
-        print('Corpus: {name}, {files} files ({diff_files:+d}), {bytes} bytes ({diff_bytes:+d})'.format(
+        diff_files = current_corpus_size.files - LAST_CORPUS_SIZE.files
+        diff_bytes = current_corpus_size.bytes - LAST_CORPUS_SIZE.bytes
+
+        print('Corpus: {name}, {files} files ({diff_files}), {bytes} bytes ({diff_bytes})'.format(
             name=CORPUS_DIRECTORY,
             files=current_corpus_size.files,
-            diff_files=current_corpus_size.files - LAST_CORPUS_SIZE.files,
+            diff_files=format_integer(diff_files),
             bytes=current_corpus_size.bytes,
-            diff_bytes=current_corpus_size.bytes - LAST_CORPUS_SIZE.bytes
+            diff_bytes=format_integer(diff_bytes)
         ))
     else:
         print('Corpus: {name}, {files} files, {bytes} bytes'.format(
@@ -279,10 +291,13 @@ def overview():
 
     current_coverage = check_coverage(CORPUS_DIRECTORY)
     if LAST_COVERAGE:
-        print('Coverage: {line} lines ({diff_lines:+d}), {branch} branches ({diff_branches:+d})'.format(
+        diff_lines=current_coverage.lines - LAST_COVERAGE.lines
+        diff_branches=current_coverage.branches - LAST_COVERAGE.branches
+
+        print('Coverage: {line} lines ({diff_lines}), {branch} branches ({diff_branches})'.format(
             line=current_coverage.lines, branch=current_coverage.branches,
-            diff_lines=current_coverage.lines - LAST_COVERAGE.lines,
-            diff_branches=current_coverage.branches - LAST_COVERAGE.branches
+            diff_lines=format_integer(diff_lines),
+            diff_branches=format_integer(diff_branches)
         ))
     else:
         print('Coverage: {line} lines, {branch} branches'.format(line=current_coverage.lines,
