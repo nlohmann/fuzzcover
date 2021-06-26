@@ -1,5 +1,11 @@
 ![](data/fuzzcover.png)
 
+<center>
+
+[About](#about) | [Preparation](#preparation) | [Notes](#notes) | [Process](#process) | [Tutorial](#tutorial) | [Examples](#examples) | [Command-line reference](#command-line-reference) | [Roadmap](#roadmap) | [Support](#support) | [License](#license)
+
+</center>
+
 ## About
 
 **Fuzzcover** is a set of utilities to use [libFuzzer](http://libfuzzer.info) to generate tests to achieve a high function coverage of code of your choice. It bases on the ideas presented in the talk [**Testing Legacy Code - Fuzzing for Better Input Data**](https://meetingcpp.com/mcpp/slides/2019/Testing%20Legacy%20Code%20-%20Fuzzing%20for%20Better%20Input%20Data.pdf) by Tina Ulbrich and Niel Waldren on [Meeting C++ 2019](https://meetingcpp.com/2019/).
