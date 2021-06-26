@@ -52,6 +52,7 @@ To generate tests for a function, you need to perform the following steps:
     - Select "Reduce corpus" to delete unnecessary files from the corpus while preserving coverage. This may take a while.
     - Select "Dump corpus" to show all generated inputs.
     - Select "Show coverage" to open a browser showing the coverage of your code.
+4. Integrate the generated test cases to your unit test suite. This is currently out of scope of Fuzzcover, but is on our [roadmap](#roadmap).
 
 ## Tutorial
 
@@ -117,6 +118,70 @@ make fuzzer_iban
 
 The binary is created in `build/examples/fuzzer_iban`.
 
+### Step 3: Call the interactive Fuzzcover suite
+
+Assuming you created and sourced a virtual Python environment and installed the required packages, you can call the interactive suite with:
+
+```shell
+cd examples
+../../tools/fuzzcover.py ./fuzzer_iban
+```
+
+This will open the main menu:
+
+![](data/tutorial/screen1.png)
+
+The corpus will be created in folder `fuzzer_iban_corpus` in the current directory. This folder is created at startup and currently contains no files. The coverage is determined by executing the test function with every function in the corpus. The 33 covered lines and 8 branches are just the command line parser of Fuzzcover and are not relevant to your test function.
+
+Now, select "Start fuzzing":
+
+![](data/tutorial/screen2.png)
+
+Then, set some parameters:
+
+- By default, the fuzzer is only called for 30 seconds. You can set any value where `0` means running the fuzzer forever. You can always abort by pressing Ctrl+C.
+- The number of fuzzer runs can also be limited. Each fuzzer run tries to generate a new input, yet only inputs that change the coverage are eventually stored in the corpus. `-1` means no limit is set.
+- The input sizes can be limited with the next option. The default value `0` means no limit and libFuzzer will gradually try larger inputs.
+- Finally, you can select whether only ASCII values should be created.
+
+Once the last option is set, the fuzzer starts and a lot of lines are shown. The format is discribed in detail in the [libFuzzer tutorial](https://github.com/google/fuzzing/blob/master/tutorial/libFuzzerTutorial.md).
+
+![](data/tutorial/screen3.png)
+
+After 30 seconds, the fuzzing ends.
+
+![](data/tutorial/screen5.png)
+
+As we see, the fuzzer executed some 9 million runs and added 74 files with in total 1270 bytes to the corpus. Each corpus entry is a byte sequence that can be transformed into a test case. Running all of them covers 131 lines and 28 branches.
+
+Next, we want to reduce the corpus. Fuzzcover will execute some heuristics to determine which files do not contribute to the coverage. As this problem is NP-complete, we cannot guarantee finding the smallest corpus. Furthermore, the heuristics are stable: calling the reduction step multiple times will not further change the corpus.
+
+![](data/tutorial/screen7.png)
+
+After some time, we see that 70 files were removed from the corpus and only 35 bytes remain while the coverage remained at 131 lines and 28 branches.
+
+![](data/tutorial/screen9.png)
+
+Next, we dump the corpus:
+
+![](data/tutorial/screen10.png)
+
+We see four lines with a long hash as filename and a JSON representation of the test input (in our case strings). You may have expected a valid IBAN number in the corpus, but that would have been a great coincidence: Fuzzcover only aims at funding great coverage, but that does not necessarily require that the `is_iban` function will ever return `true`.
+
+Finally, we want to examine the coverage by looking at the code:
+
+![](data/tutorial/screen11.png)
+
+A browser window opens and we can navigate to the source of our test function, `examples/iban/iban.hpp`.
+
+![](data/tutorial/screen12.png)
+
+The coverage is at 100%, and indeed all lines are blue and all branches are hit!
+
+### Step 4: Integrate the new test cases
+
+This step is not automated. It involves taking the generated test cases and including them in the test suite you use for unit tests. This can be as trivial as copy/pasting the strings. It is part of the [roadmap](#roadmap) of Fuzzcover to support this step better.
+
 ## Examples
 
 Folder [`examples`](examples) contains further examples.
@@ -126,8 +191,12 @@ Folder [`examples`](examples) contains further examples.
 ### Generated binaries
 
 ```
+usage: binary ARGUMENTS
+
 Fuzzcover - test suite generation for C++
 
+arguments:
+  --help                   show this help message and exit
   --fuzz [OPTION...]       perform fuzzing
   --dump CORPUS_DIRECTORY  dump the corpus files as JSON
   --test CORPUS_DIRECTORY  run the test function on the corpus files
