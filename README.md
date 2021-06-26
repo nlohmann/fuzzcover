@@ -1,5 +1,3 @@
-# Fuzzcover - test suite generation for C++
-
 ![](data/fuzzcover.png)
 
 ## About
@@ -50,8 +48,6 @@ We will explain the process in detail by looking at [iban_fuzz.cpp](examples/iba
 
 ![](data/example_cpp.png)
 
-https://github.com/nlohmann/fuzzcover/blob/2575467e7d0473549a7e5490b55e02afc330a5a3/examples/iban/iban_fuzz.cpp#L1-L19
-
 Let's walk through the lines:
 
 - In line 1, we include the main header of Fuzzcover. The include path will be automatically adjusted once you add `libfuzzcover` as dependency to your CMake file.
@@ -64,9 +60,16 @@ Let's walk through the lines:
 - In line 15, we call the test function with the provided test input (which is `std::string` in our case).
 - In line 19, we generate a `main` function that implements several command-line parameters (see the [command-line reference](#command-line-reference)). Note we pass the name of the class defined in line 4.
 
+The [`CMakeLists.txt`](examples/CMakeLists.txt) for this example is straightforward:
+
+![](data/example_cmake.png)
+
+- In line 1, we define the executable for the fuzzer which only needs the source file [iban_fuzz.cpp](examples/iban/iban_fuzz.cpp).
+- In line 2, we list the dependencies. As the IBAN validation is a header-only library, we do not need to add a library for this, and only need to add `libfuzzcover` as dependency.
+
 ## Examples
 
-Folder [`examples`](examples) contains several examples.
+Folder [`examples`](examples) contains further examples.
 
 ## Command-line reference
 
