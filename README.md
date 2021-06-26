@@ -24,6 +24,17 @@ pip3 install -r tools/requirements.txt
 
 In the following, we assume all tools are installed and the virtual environment is sourced.
 
+## Notes
+
+The default AppleClang provided by Xcode does not work as it does not contain libFuzzer. In that case, you will get a linker error such as
+
+```
+ld: file not found: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/12.0.5/lib/darwin/libclang_rt.fuzzer_osx.a
+clang: error: linker command failed with exit code 1 (use -v to see invocation)
+```
+
+You need to install Clang via Homebrew.
+
 ## Process
 
 To generate tests for a function, you need to perform the following steps:
@@ -44,9 +55,33 @@ To generate tests for a function, you need to perform the following steps:
 
 ## Tutorial
 
-We will explain the process in detail by looking at [iban_fuzz.cpp](examples/iban/iban_fuzz.cpp). Assume [iban.hpp](examples/iban/iban.hpp) contains code to validate International Bank Account Numbers (IBAN) in function `bool is_iban(const std::string &ibanstring)` and we want to generate tests for this function without even looking at the source code. According to the process above, we first implement the interface `fuzzcover_interface`: 
+We will explain the process in detail by looking at [iban_fuzz.cpp](examples/iban/iban_fuzz.cpp). Assume [iban.hpp](examples/iban/iban.hpp) contains code to validate International Bank Account Numbers (IBAN) in function `bool is_iban(const std::string &ibanstring)` and we want to generate tests for this function without even looking at the source code.
 
-![](data/example_cpp.png)
+### Step 1: Implement Fuzzcover interface
+
+According to the process above, we first implement the interface `fuzzcover_interface`: 
+
+```cpp
+#include <fuzzcover/fuzzcover.hpp>
+#include "iban.hpp"
+
+class iban_fuzz : public fuzzcover::fuzzcover_interface<std::string>
+{
+  public:
+    test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
+    {
+        FuzzedDataProvider data_provider(data, size);
+        return data_provider.ConsumeRemainingBytesAsString();
+    }
+
+    void test_function(const test_input_t& value) override
+    {
+        is_valid_iban(value);
+    }
+};
+
+MAKE_MAIN(iban_fuzz)
+```
 
 Let's walk through the lines:
 
@@ -60,12 +95,27 @@ Let's walk through the lines:
 - In line 15, we call the test function with the provided test input (which is `std::string` in our case).
 - In line 19, we generate a `main` function that implements several command-line parameters (see the [command-line reference](#command-line-reference)). Note we pass the name of the class defined in line 4.
 
+### Step 2: Compile
+
 The [`CMakeLists.txt`](examples/CMakeLists.txt) for this example is straightforward:
 
-![](data/example_cmake.png)
+```cmake
+add_executable(fuzzer_iban iban/iban_fuzz.cpp)
+target_link_libraries(fuzzer_iban PRIVATE libfuzzcover)
+```
 
 - In line 1, we define the executable for the fuzzer which only needs the source file [iban_fuzz.cpp](examples/iban/iban_fuzz.cpp).
 - In line 2, we list the dependencies. As the IBAN validation is a header-only library, we do not need to add a library for this, and only need to add `libfuzzcover` as dependency.
+
+We now can compile the example:
+
+```shell
+mkdir build
+cd build
+make fuzzer_iban
+```
+
+The binary is created in `build/examples/fuzzer_iban`.
 
 ## Examples
 
