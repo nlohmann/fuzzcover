@@ -361,13 +361,26 @@ def main_menu():
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Fuzzcover")
+    parser = argparse.ArgumentParser(description="Fuzzcover - test suite generation for C++")
     parser.add_argument('binary', metavar='FUZZER_BINARY', type=str, help='The binary linked to the fuzzcover library.')
     parser.add_argument('corpus', metavar='CORPUS_DIRECTORY', type=str, nargs='?',
                         help='The directory of the corpus. If not provided, the name of the corpus directory will be '
                              'derived from the name of the fuzzer binary. The directory will be created if it does not '
                              'exist.')
     args = parser.parse_args()
+
+    try:
+        subprocess.check_output(['llvm-profdata', '--help'], stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        print(cf.bold_red('WARNING: The tool llvm-profdata was not found in the PATH!'))
+    try:
+        subprocess.check_output(['llvm-cov', '--version'], stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        print(cf.bold_red('WARNING: The tool llvm-cov was not found in the PATH!'))
+    try:
+        subprocess.check_output(['genhtml', '--version'], stderr=subprocess.DEVNULL)
+    except FileNotFoundError:
+        print(cf.bold_red('WARNING: The tool genhtml was not found in the PATH!'))
 
     # process command line parameters
     FUZZCOVER_BINARY = os.path.abspath(args.binary)

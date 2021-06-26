@@ -113,8 +113,11 @@ class fuzzcover_interface
 
             if (current == "--help")
             {
-                std::cerr << "fuzzcover - test suite generation for C++\n\n"
-                          << "  --fuzz [OPTION...]       perform fuzzing\n"
+                std::cerr << "usage: " << argv[0] << " ARGUMENTS\n\n";
+                std::cerr << "Fuzzcover - test suite generation for C++\n\n"
+                          << "arguments:\n"
+                             "  --help                   show this help message and exit\n"
+                             "  --fuzz [OPTION...]       perform fuzzing\n"
                              "  --dump CORPUS_DIRECTORY  dump the corpus files as JSON\n"
                              "  --test CORPUS_DIRECTORY  run the test function on the corpus files\n"
                              "\n"
