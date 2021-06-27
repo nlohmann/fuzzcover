@@ -1,4 +1,3 @@
 .idea
 cmake-build-*
-tools/venv
 .DS_Store
