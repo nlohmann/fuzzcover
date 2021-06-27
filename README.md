@@ -2,7 +2,7 @@
 
 <center>
 
-[About](#about) | [Preparation](#preparation) | [Notes](#notes) | [Process](#process) | [Tutorial](#tutorial) | [Examples](#examples) | [Command-line reference](#command-line-reference) | [Roadmap](#roadmap) | [Support](#support) | [License](#license)
+[About](#about) | [Preparation](#preparation) | [Process](#process) | [Tutorial](#tutorial) | [Examples](#examples) | [Command-line reference](#command-line-reference) | [Roadmap](#roadmap) | [Support](#support) | [License](#license)
 
 </center>
 
@@ -30,7 +30,7 @@ pip3 install -r tools/requirements.txt
 
 In the following, we assume all tools are installed and the virtual environment is sourced.
 
-## Notes
+### Notes
 
 The default AppleClang provided by Xcode does not work as it does not contain libFuzzer. In that case, you will get a linker error such as
 
@@ -39,7 +39,13 @@ ld: file not found: /Applications/Xcode.app/Contents/Developer/Toolchains/XcodeD
 clang: error: linker command failed with exit code 1 (use -v to see invocation)
 ```
 
-You need to install Clang via Homebrew.
+You need to install Clang via Homebrew, add it to your path, and tell CMake to use it:
+
+```shell
+brew install llvm
+export PATH=$(brew --prefix llvm)/bin:$PATH
+CXX=clang cmake ..
+```
 
 ## Process
 
@@ -90,7 +96,7 @@ class iban_fuzz : public fuzzcover::fuzzcover_interface<std::string>
 MAKE_MAIN(iban_fuzz)
 ```
 
-Let's walk through the lines:
+Let's walk through the code:
 
 - In line 1, we include the main header of Fuzzcover. The include path will be automatically adjusted once you add `libfuzzcover` as dependency to your CMake file.
 - In line 2, we add the header needed to call the `is_valid_iban` function we want to test.
@@ -156,31 +162,27 @@ Once the last option is set, the fuzzer starts and a lot of lines are shown. The
 
 After 30 seconds, the fuzzing ends.
 
-![](data/tutorial/screen5.png)
+![](data/tutorial/screen4.png)
 
-As we see, the fuzzer executed some 9 million runs and added 74 files with in total 1270 bytes to the corpus. Each corpus entry is a byte sequence that can be transformed into a test case. Running all of them covers 131 lines and 28 branches.
+As we see, the fuzzer executed some 3 million runs and added 102 files with in total 2702 bytes to the corpus. Note your exact numbers may differ. Each corpus entry is a byte sequence that can be transformed into a test case. Running all of them covers 131 lines and 28 branches.
 
 Next, we want to reduce the corpus. Fuzzcover will execute some heuristics to determine which files do not contribute to the coverage. As this problem is NP-complete, we cannot guarantee finding the smallest corpus. Furthermore, the heuristics are stable: calling the reduction step multiple times will not further change the corpus.
 
-![](data/tutorial/screen7.png)
+![](data/tutorial/screen5.png)
 
-After some time, we see that 70 files were removed from the corpus and only 35 bytes remain while the coverage remained at 131 lines and 28 branches.
+After some time, we see that 98 files were removed from the corpus and only 40 bytes remain while the coverage remained at 131 lines and 28 branches.
 
-![](data/tutorial/screen9.png)
+![](data/tutorial/screen6.png)
 
 Next, we dump the corpus:
 
-![](data/tutorial/screen10.png)
+![](data/tutorial/screen7.png)
 
 We see four lines with a long hash as filename and a JSON representation of the test input (in our case strings). You may have expected a valid IBAN number in the corpus, but that would have been a great coincidence: Fuzzcover only aims at funding great coverage, but that does not necessarily require that the `is_iban` function will ever return `true`.
 
-Finally, we want to examine the coverage by looking at the code:
+Finally, we want to examine the coverage by looking at the code. A browser window opens and we can navigate to the source of our test function, `examples/iban/iban.hpp`.
 
-![](data/tutorial/screen11.png)
-
-A browser window opens and we can navigate to the source of our test function, `examples/iban/iban.hpp`.
-
-![](data/tutorial/screen12.png)
+![](data/tutorial/screen8.png)
 
 The coverage is at 100%, and indeed all lines are blue and all branches are hit!
 
