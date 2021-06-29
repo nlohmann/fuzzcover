@@ -23,11 +23,12 @@ int fuzz_wrapper(const std::uint8_t* data, std::size_t size);
  * @brief interface for fuzzcover
  * @tparam TestInput type of the test input
  */
-template <class TestInput>
+template <class TestInput, class TestOutput = void>
 class fuzzcover_interface
 {
   public:
     using test_input_t = TestInput;
+    using test_output_t = TestOutput;
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -42,8 +43,9 @@ class fuzzcover_interface
     /*!
      * @brief execute a test with a given input
      * @param[in] value test input
+     * @return test output (unless test_output_t is void)
      */
-    virtual void test_function(const test_input_t& value) = 0;
+    virtual test_output_t test_function(const test_input_t& value) = 0;
 
     ///////////////////////////////////////////////////////////////////////////
 
@@ -67,7 +69,7 @@ class fuzzcover_interface
     {
         for (const auto& filename : filenames)
         {
-            test_function(value_from_file(filename));
+            static_cast<void>(test_function(value_from_file(filename)));
         }
     }
 
@@ -77,15 +79,7 @@ class fuzzcover_interface
      */
     void dump(const std::vector<std::string>& filenames)
     {
-        for (const auto& filename : filenames)
-        {
-            std::cout
-                << filename
-                << ": "
-                << nlohmann::json(value_from_file(filename)).dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore)
-                << '\n';
-        }
-        std::cout << std::flush;
+        dump(std::is_void<test_output_t>(), filenames);
     }
 
     int handle_arguments(int argc, char** argv)
@@ -133,6 +127,39 @@ class fuzzcover_interface
     }
 
   private:
+    void dump(std::false_type /*test_output_t is void*/, const std::vector<std::string>& filenames)
+    {
+        for (const auto& filename : filenames)
+        {
+            std::cout
+                << (filename.size() > 7 ? filename.substr(filename.size() - 7) : filename)
+                << ": "
+                << nlohmann::json(value_from_file(filename)).dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore)
+                << " -> "
+                << nlohmann::json(test_function(value_from_file(filename)))
+                << '\n';
+        }
+        std::cout << std::flush;
+    }
+
+    void dump(std::true_type /*test_output_t is void*/, const std::vector<std::string>& filenames)
+    {
+        for (const auto& filename : filenames)
+        {
+            std::cout
+                << (filename.size() > 7 ? filename.substr(filename.size() - 7) : filename)
+                << ": "
+                << nlohmann::json(value_from_file(filename)).dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore)
+                << '\n';
+        }
+        std::cout << std::flush;
+    }
+
+    /*!
+     * @brief collect all files names in a given directory
+     * @param directory directory to read
+     * @return list of file names
+     */
     std::vector<std::string> get_files(const char* directory)
     {
         std::vector<std::string> result;
@@ -185,11 +212,11 @@ class fuzzcover_interface
 
 } // namespace fuzzcover
 
-#define MAKE_MAIN(CLASSNAME)                                     \
+#define MAKE_MAIN(CLASS_NAME)                                    \
     namespace fuzzcover {                                        \
     int fuzz_wrapper(const std::uint8_t* data, std::size_t size) \
     {                                                            \
-        CLASSNAME instance;                                      \
+        CLASS_NAME instance;                                     \
         instance.fuzz(data, size);                               \
         return 0;                                                \
     }                                                            \
@@ -197,6 +224,6 @@ class fuzzcover_interface
                                                                  \
     int main(int argc, char** argv)                              \
     {                                                            \
-        CLASSNAME instance;                                      \
+        CLASS_NAME instance;                                     \
         return instance.handle_arguments(argc, argv);            \
     }

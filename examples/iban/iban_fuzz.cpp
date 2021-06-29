@@ -1,7 +1,7 @@
 #include <fuzzcover/fuzzcover.hpp>
 #include "iban.hpp"
 
-class iban_fuzz : public fuzzcover::fuzzcover_interface<std::string>
+class iban_fuzz : public fuzzcover::fuzzcover_interface<std::string, bool>
 {
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
@@ -10,9 +10,9 @@ class iban_fuzz : public fuzzcover::fuzzcover_interface<std::string>
         return data_provider.ConsumeRemainingBytesAsString();
     }
 
-    void test_function(const test_input_t& value) override
+    test_output_t test_function(const test_input_t& value) override
     {
-        is_valid_iban(value);
+        return is_valid_iban(value);
     }
 };
 

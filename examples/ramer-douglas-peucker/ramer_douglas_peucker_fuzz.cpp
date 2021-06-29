@@ -1,7 +1,7 @@
 #include "ramer_douglas_peucker.hpp"
 #include <fuzzcover/fuzzcover.hpp>
 
-class ramer_douglas_peucker_fuzz : public fuzzcover::fuzzcover_interface<std::tuple<std::vector<Point>, double>>
+class ramer_douglas_peucker_fuzz : public fuzzcover::fuzzcover_interface<std::tuple<std::vector<Point>, double>, std::vector<Point>>
 {
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
@@ -19,7 +19,7 @@ class ramer_douglas_peucker_fuzz : public fuzzcover::fuzzcover_interface<std::tu
         return {points, epsilon};
     }
 
-    void test_function(const test_input_t& value) override
+    test_output_t test_function(const test_input_t& value) override
     {
         std::vector<Point> pointListOut;
         try
@@ -28,6 +28,7 @@ class ramer_douglas_peucker_fuzz : public fuzzcover::fuzzcover_interface<std::tu
         }
         catch (...)
         {}
+        return pointListOut;
     }
 };
 
