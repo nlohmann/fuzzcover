@@ -2,7 +2,7 @@
 
 <center>
 
-[About](#about) | [Preparation](#preparation) | [Process](#process) | [Tutorial](#tutorial) | [Examples](#examples) | [Command-line reference](#command-line-reference) | [Roadmap](#roadmap) | [Support](#support) | [License](#license)
+[About](#about) | [Preparation](#preparation) | [Process](#process) | [Tutorial](#tutorial) | [Examples](#examples) | [Command-line reference](#command-line-reference) | [Support](#support) | [License](#license)
 
 </center>
 
@@ -64,7 +64,7 @@ To generate tests for a function, you need to perform the following steps:
     - Select "Reduce corpus" to delete unnecessary files from the corpus while preserving coverage. This may take a while.
     - Select "Dump corpus" to show all generated inputs.
     - Select "Show coverage" to open a browser showing the coverage of your code.
-4. Integrate the generated test cases to your unit test suite. This is currently out of scope of Fuzzcover, but is on our [roadmap](#roadmap).
+4. Integrate the generated test cases to your unit test suite. TODO: document this
 
 ## Tutorial
 
@@ -186,7 +186,7 @@ The coverage is at 100%, and indeed all lines are blue and all branches are hit!
 
 ### Step 4: Integrate the new test cases
 
-This step is not automated. It involves taking the generated test cases and including them in the test suite you use for unit tests. This can be as trivial as copy/pasting the strings. It is part of the [roadmap](#roadmap) of Fuzzcover to support this step better.
+This step is not automated. It involves taking the generated test cases and including them in the test suite you use for unit tests. TODO: document this
 
 ## Examples
 
@@ -208,13 +208,16 @@ usage: binary ARGUMENTS
 Fuzzcover - test suite generation for C++
 
 arguments:
-  --help                   show this help message and exit
-  --fuzz [OPTION...]       perform fuzzing
-  --dump CORPUS_DIRECTORY  dump the corpus files as JSON
-  --test CORPUS_DIRECTORY  run the test function on the corpus files
+  --help                                   show this help message and exit
+  --fuzz [LIBFUZZER_OPTION...]             perform fuzzing
+  --dump CORPUS_DIRECTORY [CORPUS_FILE]    dump the corpus files as JSON
+  --test CORPUS_DIRECTORY                  run the test function on the corpus
+  --check CORPUS_FILE [DOCTEST_OPTION...]  execute test suite
 
-  CORPUS_DIRECTORY  the corpus directory
-  OPTION            an option for Libfuzzer (e.g., '-help=1' for more information)
+  CORPUS_DIRECTORY  a corpus directory
+  CORPUS_FILE       a corpus file in JSON format as created by --dump
+  LIBFUZZER_OPTION  an option for LibFuzzer (e.g., '-help=1')
+  DOCTEST_OPTION    an option for doctest (e.g., '--help')
 ```
 
 Option `--fuzz` cab be followed with [any option for libFuzzer](https://llvm.org/docs/LibFuzzer.html#options).
@@ -224,10 +227,10 @@ Option `--fuzz` cab be followed with [any option for libFuzzer](https://llvm.org
 ```
 usage: fuzzcover.py [-h] FUZZER_BINARY [CORPUS_DIRECTORY]
 
-Fuzzcover
+Fuzzcover - test suite generation for C++
 
 positional arguments:
-  FUZZER_BINARY     The binary linked to the Fuzzcover library.
+  FUZZER_BINARY     The binary linked to the fuzzcover library.
   CORPUS_DIRECTORY  The directory of the corpus. If not provided, the name of
                     the corpus directory will be derived from the name of the
                     fuzzer binary. The directory will be created if it does
@@ -236,11 +239,6 @@ positional arguments:
 optional arguments:
   -h, --help        show this help message and exit
 ```
-
-## Roadmap
-
-- [ ] generate an actual test suite (e.g., for [Catch](https://github.com/catchorg/Catch2) or [ApprovalTests.cpp](https://github.com/approvals/ApprovalTests.cpp)
-- [ ] add CI
 
 ## Support
 

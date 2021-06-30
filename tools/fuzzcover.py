@@ -157,14 +157,19 @@ def merge_corpus():
         os.remove(os.path.join(CORPUS_DIRECTORY, 'default.profraw'))
 
 
-def dump():
+def dump(filename = None):
     """
-    dump corpus content to standard output
+    dump corpus content
     """
     with tempfile.TemporaryDirectory() as temp_dir:
         env = dict(os.environ, LLVM_PROFILE_FILE=os.path.join(temp_dir, 'default.profraw'))
-        call = [FUZZCOVER_BINARY, '--dump', '.']
-        subprocess.run(call, env=env, cwd=CORPUS_DIRECTORY)
+        call = [FUZZCOVER_BINARY, '--dump', CORPUS_DIRECTORY]
+
+        if filename:
+            call.append(filename)
+            print('Saving corpus to', filename)
+
+        subprocess.run(call, env=env)
 
 
 def show_coverage():
@@ -317,7 +322,7 @@ def main_menu():
             'type': 'list',
             'name': 'main_menu',
             'message': 'What do you want?',
-            'choices': ['Start fuzzing', 'Reduce corpus', 'Dump corpus', 'Show coverage', 'Clear corpus', 'Quit']
+            'choices': ['Start fuzzing', 'Reduce corpus', 'Dump corpus', 'Save corpus to JSON file', 'Show coverage', 'Clear corpus', 'Quit']
         }
     ]
 
@@ -332,7 +337,10 @@ def main_menu():
             fuzz()
 
         elif answers['main_menu'] == 'Dump corpus':
-            dump()
+            dump(filename=None)
+
+        elif answers['main_menu'] == 'Save corpus to JSON file':
+            dump(filename=os.path.basename(FUZZCOVER_BINARY) + '.json')
 
         elif answers['main_menu'] == 'Show coverage':
             show_coverage()

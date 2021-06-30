@@ -11,6 +11,9 @@
 #include <vector>               // vector
 #include <nlohmann/json.hpp>    // nlohmann::json
 
+#define DOCTEST_CONFIG_IMPLEMENT
+#include <doctest/doctest.h>
+
 // entry point for libfuzzer
 extern "C" int LLVMFuzzerRunDriver(int* argc, char*** argv, int (*UserCb)(const uint8_t* Data, size_t Size));
 
@@ -18,6 +21,9 @@ namespace fuzzcover {
 
 // function to be defined via MAKE_MAIN later to glue the client code with fuzzcover
 int fuzz_wrapper(const std::uint8_t* data, std::size_t size);
+
+// function to be defined via MAKE_MAIN later to glue doctest with fuzzcover
+void doctest_wrapper();
 
 /*!
  * @brief interface for fuzzcover
@@ -62,6 +68,104 @@ class fuzzcover_interface
     }
 
     /*!
+     * @brief handle the command line arguments
+     * @param argc the number of arguments
+     * @param argv the arguments
+     * @return 0 in case of success, any other value otherwise
+     */
+    int handle_arguments(int argc, char** argv)
+    {
+        if (argc >= 2)
+        {
+            std::string current = argv[1];
+
+            if (current == "--fuzz")
+            {
+                return LLVMFuzzerRunDriver(&argc, &argv, fuzz_wrapper);
+            }
+
+            if (current == "--test" && argc >= 3)
+            {
+                test(get_files(argv[2]));
+                return EXIT_SUCCESS;
+            }
+
+            if (current == "--check" && argc >= 3)
+            {
+                std::ifstream input_file(argv[2]);
+                tests = nlohmann::json::parse(input_file);
+                doctest::Context context;
+                context.applyCommandLine(argc, argv);
+                return context.run();
+            }
+
+            if (current == "--dump" && argc >= 3)
+            {
+                if (argc == 3)
+                {
+                    dump(get_files(argv[2]), std::cout);
+                }
+                else
+                {
+                    std::ofstream outfile(argv[3]);
+                    dump(get_files(argv[2]), outfile);
+                }
+                return EXIT_SUCCESS;
+            }
+
+            if (current == "--help")
+            {
+                std::cerr << "usage: " << argv[0] << " ARGUMENTS\n\n";
+                std::cerr << "Fuzzcover - test suite generation for C++\n\n"
+                          << "arguments:\n"
+                             "  --help                                   show this help message and exit\n"
+                             "  --fuzz [LIBFUZZER_OPTION...]             perform fuzzing\n"
+                             "  --dump CORPUS_DIRECTORY [CORPUS_FILE]    dump the corpus files as JSON\n"
+                             "  --test CORPUS_DIRECTORY                  run the test function on the corpus\n"
+                             "  --check CORPUS_FILE [DOCTEST_OPTION...]  execute test suite\n"
+                             "\n"
+                             "  CORPUS_DIRECTORY  a corpus directory\n"
+                             "  CORPUS_FILE       a corpus file in JSON format as created by --dump\n"
+                             "  LIBFUZZER_OPTION  an option for LibFuzzer (e.g., '-help=1')\n"
+                             "  DOCTEST_OPTION    an option for doctest (e.g., '--help')"
+                          << std::endl;
+                return EXIT_SUCCESS;
+            }
+        }
+
+        std::cerr << "Fuzzcover: unknown or missing argument; call '" << argv[0] << " --help' for more information." << std::endl;
+        return EXIT_FAILURE;
+    }
+
+    // variable to store parsed tests for the --check option
+    static nlohmann::json tests;
+
+    void check(std::true_type /*test_output_t is void*/)
+    {
+        for (const auto& entry : tests)
+        {
+            test_input_t input = entry.at("input");
+            CAPTURE(entry.at("input"));
+            CAPTURE(entry.at("hash"));
+            CHECK_NOTHROW(test_function(input));
+        }
+    }
+
+    void check(std::false_type /*test_output_t is void*/)
+    {
+        for (const auto& entry : tests)
+        {
+            test_input_t input = entry.at("input");
+            test_output_t output = entry.at("output");
+            CAPTURE(entry.at("input"));
+            CAPTURE(entry.at("output"));
+            CAPTURE(entry.at("hash"));
+            CHECK(test_function(input) == output);
+        }
+    }
+
+  private:
+    /*!
      * @brief execute the test function for the corpus
      * @param[in] filenames names of the files to read from
      */
@@ -76,78 +180,69 @@ class fuzzcover_interface
     /*!
      * @brief dump the content of the corpus
      * @param[in] filenames names of the files to read from
+     * @param[in] os stream to dump the corpus to
      */
-    void dump(const std::vector<std::string>& filenames)
+    void dump(const std::vector<std::string>& filenames, std::ostream& os)
     {
-        dump(std::is_void<test_output_t>(), filenames);
+        dump(std::is_void<test_output_t>(), filenames, os);
     }
 
-    int handle_arguments(int argc, char** argv)
+    /*!
+     * @brief abbreviate a file name by a 7-digit hash just as short git commit hashes
+     * @param filename filename to abbreviate
+     * @return first 7 characters of the basename of @a filename
+     */
+    static std::string short_hash(const std::string& filename)
     {
-        if (argc >= 2)
-        {
-            std::string current = argv[1];
-
-            if (current == "--fuzz")
-            {
-                return LLVMFuzzerRunDriver(&argc, &argv, fuzz_wrapper);
-            }
-
-            if (current == "--test")
-            {
-                test(get_files(argv[2]));
-                return EXIT_SUCCESS;
-            }
-
-            if (current == "--dump")
-            {
-                dump(get_files(argv[2]));
-                return EXIT_SUCCESS;
-            }
-
-            if (current == "--help")
-            {
-                std::cerr << "usage: " << argv[0] << " ARGUMENTS\n\n";
-                std::cerr << "Fuzzcover - test suite generation for C++\n\n"
-                          << "arguments:\n"
-                             "  --help                   show this help message and exit\n"
-                             "  --fuzz [OPTION...]       perform fuzzing\n"
-                             "  --dump CORPUS_DIRECTORY  dump the corpus files as JSON\n"
-                             "  --test CORPUS_DIRECTORY  run the test function on the corpus files\n"
-                             "\n"
-                             "  CORPUS_DIRECTORY  the corpus directory\n"
-                             "  OPTION            an option for Libfuzzer (e.g., '-help=1' for more information)"
-                          << std::endl;
-                return EXIT_SUCCESS;
-            }
-        }
-
-        std::cerr << "fuzzcover: unknown or missing argument; call '" << argv[0] << " --help' for more information." << std::endl;
-        return EXIT_FAILURE;
+        auto slash = filename.find_last_of('/');
+        slash = (slash == std::string::npos) ? 0 : slash + 1;
+        return filename.substr(slash, 7);
     }
 
-  private:
-    void dump(std::false_type /*test_output_t is void*/, const std::vector<std::string>& filenames)
+    void dump(std::false_type /*test_output_t is void*/, const std::vector<std::string>& filenames, std::ostream& os)
     {
+        auto file_count = filenames.size();
+        os << "[\n";
+
         for (const auto& filename : filenames)
         {
             nlohmann::json input = value_from_file(filename);
             nlohmann::json output = test_function(value_from_file(filename));
-            nlohmann::json tuple = {{"input", std::move(input)}, {"output", std::move(output)}};
-            std::cout << tuple.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore) << '\n';
+            nlohmann::json tuple = {{"input", std::move(input)}, {"output", std::move(output)}, {"hash", short_hash(filename)}};
+            os << "  " << tuple.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
+            if (--file_count != 0)
+            {
+                os << ",\n";
+            }
+            else
+            {
+                os << "\n";
+            }
         }
-        std::cout << std::flush;
+        os << "]" << std::endl;
     }
 
-    void dump(std::true_type /*test_output_t is void*/, const std::vector<std::string>& filenames)
+    void dump(std::true_type /*test_output_t is void*/, const std::vector<std::string>& filenames, std::ostream& os)
     {
+        auto file_count = filenames.size();
+        os << "[\n";
+
         for (const auto& filename : filenames)
         {
             nlohmann::json input = value_from_file(filename);
-            nlohmann::json tuple = {{"input", std::move(input)}};
-            std::cout << tuple.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore) << '\n';
+            nlohmann::json tuple = {{"input", std::move(input)}, {"hash", short_hash(filename)}};
+            os << "  " << tuple.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
+            if (--file_count != 0)
+            {
+                os << ",\n";
+            }
+            else
+            {
+                os << "\n";
+            }
         }
-        std::cout << std::flush;
+
+        os << "]" << std::endl;
     }
 
     /*!
@@ -205,20 +300,34 @@ class fuzzcover_interface
     }
 };
 
+template <class TestInput, class TestOutput>
+nlohmann::json fuzzcover_interface<TestInput, TestOutput>::tests;
+
 } // namespace fuzzcover
 
-#define MAKE_MAIN(CLASS_NAME)                                    \
-    namespace fuzzcover {                                        \
-    int fuzz_wrapper(const std::uint8_t* data, std::size_t size) \
-    {                                                            \
-        CLASS_NAME instance;                                     \
-        instance.fuzz(data, size);                               \
-        return 0;                                                \
-    }                                                            \
-    }                                                            \
-                                                                 \
-    int main(int argc, char** argv)                              \
-    {                                                            \
-        CLASS_NAME instance;                                     \
-        return instance.handle_arguments(argc, argv);            \
+#define MAKE_MAIN(CLASS_NAME)                                      \
+    namespace fuzzcover {                                          \
+    int fuzz_wrapper(const std::uint8_t* data, std::size_t size)   \
+    {                                                              \
+        CLASS_NAME instance;                                       \
+        instance.fuzz(data, size);                                 \
+        return 0;                                                  \
+    }                                                              \
+                                                                   \
+    void doctest_wrapper()                                         \
+    {                                                              \
+        CLASS_NAME instance;                                       \
+        instance.check(std::is_void<CLASS_NAME::test_output_t>()); \
+    }                                                              \
+    }                                                              \
+                                                                   \
+    TEST_CASE(#CLASS_NAME)                                         \
+    {                                                              \
+        fuzzcover::doctest_wrapper();                              \
+    }                                                              \
+                                                                   \
+    int main(int argc, char** argv)                                \
+    {                                                              \
+        CLASS_NAME instance;                                       \
+        return instance.handle_arguments(argc, argv);              \
     }
