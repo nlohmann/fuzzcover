@@ -131,13 +131,10 @@ class fuzzcover_interface
     {
         for (const auto& filename : filenames)
         {
-            std::cout
-                << (filename.size() > 7 ? filename.substr(filename.size() - 7) : filename)
-                << ": "
-                << nlohmann::json(value_from_file(filename)).dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore)
-                << " -> "
-                << nlohmann::json(test_function(value_from_file(filename)))
-                << '\n';
+            nlohmann::json input = value_from_file(filename);
+            nlohmann::json output = test_function(value_from_file(filename));
+            nlohmann::json tuple = {{"input", std::move(input)}, {"output", std::move(output)}};
+            std::cout << tuple.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore) << '\n';
         }
         std::cout << std::flush;
     }
@@ -146,11 +143,9 @@ class fuzzcover_interface
     {
         for (const auto& filename : filenames)
         {
-            std::cout
-                << (filename.size() > 7 ? filename.substr(filename.size() - 7) : filename)
-                << ": "
-                << nlohmann::json(value_from_file(filename)).dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore)
-                << '\n';
+            nlohmann::json input = value_from_file(filename);
+            nlohmann::json tuple = {{"input", std::move(input)}};
+            std::cout << tuple.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore) << '\n';
         }
         std::cout << std::flush;
     }

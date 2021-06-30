@@ -10,6 +10,13 @@ if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     message(WARNING "The compiler provided by Xcode (AppleClang ${CMAKE_CXX_COMPILER_VERSION}) cannot compile Fuzzcover, because it does not contain libFuzzer. Please install Clang via Homebrew calling 'brew install llvm' and re-run CMake after setting 'CXX=$(brew --prefix llvm)/bin/clang'.")
 endif()
 
+# required headers
+include(CheckIncludeFileCXX)
+check_include_file_cxx(dirent.h FUZZCOVER_HAS_DIRENT_H)
+if (NOT FUZZCOVER_HAS_DIRENT_H)
+    message(WARNING "Header <dirent.h> is required by Fuzzcover, but not found.")
+endif()
+
 # Fuzzcover interface library
 add_library(libfuzzcover INTERFACE)
 target_include_directories(libfuzzcover INTERFACE include)
