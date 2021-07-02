@@ -331,7 +331,7 @@ def lucky():
     print('Creating corpus with default arguments...')
     delete_corpus()
     fuzz(max_total_time=10, only_ascii=True, quiet=True)
-    reduce_corpus(quiet=True)
+    reduce_corpus()
     dump(filename=os.path.basename(FUZZCOVER_BINARY) + '.json')
 
 

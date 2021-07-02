@@ -6,9 +6,9 @@
 #include <nlohmann/json.hpp>
 
 namespace nlohmann {
-void to_json(nlohmann::json& j, const nlohmann::json::lexer::token_type& t)
+void from_json(const nlohmann::json& j, nlohmann::json::lexer::token_type& t)
 {
-    j = nlohmann::json::lexer::token_type_name(t);
+    t = static_cast<nlohmann::json::lexer::token_type>(j.get<int>());
 }
 }; // namespace nlohmann
 

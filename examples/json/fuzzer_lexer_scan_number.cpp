@@ -5,7 +5,14 @@
 #include <fuzzcover/fuzzcover.hpp>
 #include <nlohmann/json.hpp>
 
-class fuzzer_lexer_scan_number : public fuzzcover::fuzzcover_interface<std::string>
+namespace nlohmann {
+void from_json(const nlohmann::json& j, nlohmann::json::lexer::token_type& t)
+{
+    t = static_cast<nlohmann::json::lexer::token_type>(j.get<int>());
+}
+}; // namespace nlohmann
+
+class fuzzer_lexer_scan_number : public fuzzcover::fuzzcover_interface<std::string, nlohmann::json::lexer::token_type>
 {
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
@@ -28,14 +35,13 @@ class fuzzer_lexer_scan_number : public fuzzcover::fuzzcover_interface<std::stri
     {
         if (value.empty())
         {
-            return false;
+            return nlohmann::json::lexer::token_type::parse_error;
         }
 
         nlohmann::detail::input_adapter ia(value.data(), value.size());
         nlohmann::detail::lexer<nlohmann::json> l(ia);
         l.get();
-        l.scan_number();
-        return true;
+        return l.scan_number();
     }
 };
 
