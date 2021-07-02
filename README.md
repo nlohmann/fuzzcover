@@ -1,8 +1,6 @@
 ![](data/fuzzcover.png)
 
-<p align="center">
 [About](#about) | [Preparation](#preparation) | [Process](#process) | [Tutorial](#tutorial) | [Examples](#examples) | [Command-line reference](#command-line-reference) | [Corpus reduction](#corpus-reduction) | [Support](#support) | [License](#license)
-</p>
 
 ## About
 
