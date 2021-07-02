@@ -11,11 +11,22 @@
 #include <vector>               // vector
 #include <nlohmann/json.hpp>    // nlohmann::json
 
+#ifndef FUZZCOVER_NODOCTEST
 #define DOCTEST_CONFIG_IMPLEMENT
-#include <doctest/doctest.h>
+#define DOCTEST_CONFIG_SUPER_FAST_ASSERTS
+#include <doctest/doctest.h> // TEST_CASE, CAPTURE, CHECK_EQ, CHECK_NOTHROW, doctest::Context
+#else
+// switch off doctest macros
+#define TEST_CASE(f) void bogus_function1() { #f; } void bogus_function2()
+#define CAPTURE(x)
+#define CHECK_EQ(x)
+#define CHECK_NOTHROW(x)
+#endif
 
+#ifndef FUZZCOVER_NOFUZZER
 // entry point for libfuzzer
 extern "C" int LLVMFuzzerRunDriver(int* argc, char*** argv, int (*UserCb)(const uint8_t* Data, size_t Size));
+#endif
 
 namespace fuzzcover {
 
@@ -79,10 +90,12 @@ class fuzzcover_interface
         {
             std::string current = argv[1];
 
+#ifndef FUZZCOVER_NOFUZZER
             if (current == "--fuzz")
             {
                 return LLVMFuzzerRunDriver(&argc, &argv, fuzz_wrapper);
             }
+#endif
 
             if (current == "--test" && argc >= 3)
             {
@@ -90,6 +103,7 @@ class fuzzcover_interface
                 return EXIT_SUCCESS;
             }
 
+#ifndef FUZZCOVER_NODOCTEST
             if (current == "--check" && argc >= 3)
             {
                 std::ifstream input_file(argv[2]);
@@ -98,6 +112,7 @@ class fuzzcover_interface
                 context.applyCommandLine(argc, argv);
                 return context.run();
             }
+#endif
 
             if (current == "--dump" && argc >= 3)
             {
@@ -119,15 +134,23 @@ class fuzzcover_interface
                 std::cerr << "Fuzzcover - test suite generation for C++\n\n"
                           << "arguments:\n"
                              "  --help                                   show this help message and exit\n"
+#ifndef FUZZCOVER_NOFUZZER
                              "  --fuzz [LIBFUZZER_OPTION...]             perform fuzzing\n"
+#endif
                              "  --dump CORPUS_DIRECTORY [CORPUS_FILE]    dump the corpus files as JSON\n"
                              "  --test CORPUS_DIRECTORY                  run the test function on the corpus\n"
+#ifndef FUZZCOVER_NODOCTEST
                              "  --check CORPUS_FILE [DOCTEST_OPTION...]  execute test suite\n"
+#endif
                              "\n"
                              "  CORPUS_DIRECTORY  a corpus directory\n"
                              "  CORPUS_FILE       a corpus file in JSON format as created by --dump\n"
+#ifndef FUZZCOVER_NOFUZZER
                              "  LIBFUZZER_OPTION  an option for LibFuzzer (e.g., '-help=1')\n"
+#endif
+#ifndef FUZZCOVER_NODOCTEST
                              "  DOCTEST_OPTION    an option for doctest (e.g., '--help')"
+#endif
                           << std::endl;
                 return EXIT_SUCCESS;
             }
@@ -160,7 +183,7 @@ class fuzzcover_interface
             CAPTURE(entry.at("input"));
             CAPTURE(entry.at("output"));
             CAPTURE(entry.at("hash"));
-            CHECK(test_function(input) == output);
+            CHECK_EQ(test_function(input), output);
         }
     }
 
@@ -331,3 +354,11 @@ nlohmann::json fuzzcover_interface<TestInput, TestOutput>::tests;
         CLASS_NAME instance;                                       \
         return instance.handle_arguments(argc, argv);              \
     }
+
+// clean up
+#ifdef DOCTEST_CONFIG_IMPLEMENT
+#undef DOCTEST_CONFIG_IMPLEMENT
+#endif
+#ifdef DOCTEST_CONFIG_SUPER_FAST_ASSERTS
+#undef DOCTEST_CONFIG_SUPER_FAST_ASSERTS
+#endif
