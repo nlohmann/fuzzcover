@@ -208,11 +208,11 @@ usage: binary ARGUMENTS
 Fuzzcover - test suite generation for C++
 
 arguments:
-  --help                                   show this help message and exit
-  --fuzz [LIBFUZZER_OPTION...]             perform fuzzing
-  --dump CORPUS_DIRECTORY [CORPUS_FILE]    dump the corpus files as JSON
-  --test CORPUS_DIRECTORY                  run the test function on the corpus
-  --check CORPUS_FILE [DOCTEST_OPTION...]  execute test suite
+  --help                                     show this help message and exit
+  --fuzz [LIBFUZZER_OPTION...]               perform fuzzing
+  --dump CORPUS_DIRECTORY [CORPUS_FILE]      dump the corpus files as JSON
+  --test CORPUS_DIRECTORY                    run the test function on the corpus
+  --check [CORPUS_FILE] [DOCTEST_OPTION...]  execute test suite
 
   CORPUS_DIRECTORY  a corpus directory
   CORPUS_FILE       a corpus file in JSON format as created by --dump
@@ -225,7 +225,7 @@ Option `--fuzz` cab be followed with [any option for libFuzzer](https://llvm.org
 ### Interactive Fuzzcover suite
 
 ```
-usage: fuzzcover.py [-h] FUZZER_BINARY [CORPUS_DIRECTORY]
+usage: fuzzcover.py [-h] [--lucky] FUZZER_BINARY [CORPUS_DIRECTORY]
 
 Fuzzcover - test suite generation for C++
 
@@ -238,6 +238,7 @@ positional arguments:
 
 optional arguments:
   -h, --help        show this help message and exit
+  --lucky           Create a test suite without user interaction.
 ```
 
 ## Support

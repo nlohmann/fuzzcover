@@ -103,10 +103,17 @@ class fuzzcover_interface
             }
 
 #ifndef FUZZCOVER_NODOCTEST
-            if (current == "--check" && argc >= 3)
+            if (current == "--check")
             {
-                std::ifstream input_file(argv[2]);
-                tests = nlohmann::json::parse(input_file);
+                // if no argument is given or it is a doctest option, default the filename
+                if (argc == 2 || (argc >= 3 && std::strlen(argv[2]) > 0 && argv[2][0] == '-'))
+                {
+                    tests = nlohmann::json::parse(std::ifstream(std::string(argv[0]) + ".json"));
+                }
+                else
+                {
+                    tests = nlohmann::json::parse(std::ifstream(argv[2]));
+                }
                 doctest::Context context;
                 context.applyCommandLine(argc, argv);
                 return context.run();
@@ -132,14 +139,14 @@ class fuzzcover_interface
                 std::cerr << "usage: " << argv[0] << " ARGUMENTS\n\n";
                 std::cerr << "Fuzzcover - test suite generation for C++\n\n"
                           << "arguments:\n"
-                             "  --help                                   show this help message and exit\n"
+                             "  --help                                     show this help message and exit\n"
 #ifndef FUZZCOVER_NOFUZZER
-                             "  --fuzz [LIBFUZZER_OPTION...]             perform fuzzing\n"
+                             "  --fuzz [LIBFUZZER_OPTION...]               perform fuzzing\n"
 #endif
-                             "  --dump CORPUS_DIRECTORY [CORPUS_FILE]    dump the corpus files as JSON\n"
-                             "  --test CORPUS_DIRECTORY                  run the test function on the corpus\n"
+                             "  --dump CORPUS_DIRECTORY [CORPUS_FILE]      dump the corpus files as JSON\n"
+                             "  --test CORPUS_DIRECTORY                    run the test function on the corpus\n"
 #ifndef FUZZCOVER_NODOCTEST
-                             "  --check CORPUS_FILE [DOCTEST_OPTION...]  execute test suite\n"
+                             "  --check [CORPUS_FILE] [DOCTEST_OPTION...]  execute test suite\n"
 #endif
                              "\n"
                              "  CORPUS_DIRECTORY  a corpus directory\n"
