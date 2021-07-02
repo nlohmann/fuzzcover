@@ -20,7 +20,6 @@
 #define TEST_CASE(f) void bogus_function1() { #f; } void bogus_function2()
 #define CAPTURE(x)
 #define CHECK_EQ(x)
-#define CHECK_NOTHROW(x)
 #endif
 
 #ifndef FUZZCOVER_NOFUZZER
@@ -40,7 +39,7 @@ void doctest_wrapper();
  * @brief interface for fuzzcover
  * @tparam TestInput type of the test input
  */
-template <class TestInput, class TestOutput = void>
+template <class TestInput, class TestOutput = bool>
 class fuzzcover_interface
 {
   public:
@@ -163,18 +162,7 @@ class fuzzcover_interface
     // variable to store parsed tests for the --check option
     static nlohmann::json tests;
 
-    void check(std::true_type /*test_output_t is void*/)
-    {
-        for (const auto& entry : tests)
-        {
-            test_input_t input = entry.at("input");
-            CAPTURE(entry.at("input"));
-            CAPTURE(entry.at("hash"));
-            CHECK_NOTHROW(test_function(input));
-        }
-    }
-
-    void check(std::false_type /*test_output_t is void*/)
+    void check()
     {
         for (const auto& entry : tests)
         {
@@ -207,23 +195,6 @@ class fuzzcover_interface
      */
     void dump(const std::vector<std::string>& filenames, std::ostream& os)
     {
-        dump(std::is_void<test_output_t>(), filenames, os);
-    }
-
-    /*!
-     * @brief abbreviate a file name by a 7-digit hash just as short git commit hashes
-     * @param filename filename to abbreviate
-     * @return first 7 characters of the basename of @a filename
-     */
-    static std::string short_hash(const std::string& filename)
-    {
-        auto slash = filename.find_last_of('/');
-        slash = (slash == std::string::npos) ? 0 : slash + 1;
-        return filename.substr(slash, 7);
-    }
-
-    void dump(std::false_type /*test_output_t is void*/, const std::vector<std::string>& filenames, std::ostream& os)
-    {
         auto file_count = filenames.size();
         os << "[\n";
 
@@ -245,27 +216,16 @@ class fuzzcover_interface
         os << "]" << std::endl;
     }
 
-    void dump(std::true_type /*test_output_t is void*/, const std::vector<std::string>& filenames, std::ostream& os)
+    /*!
+     * @brief abbreviate a file name by a 7-digit hash just as short git commit hashes
+     * @param filename filename to abbreviate
+     * @return first 7 characters of the basename of @a filename
+     */
+    static std::string short_hash(const std::string& filename)
     {
-        auto file_count = filenames.size();
-        os << "[\n";
-
-        for (const auto& filename : filenames)
-        {
-            nlohmann::json input = value_from_file(filename);
-            nlohmann::json tuple = {{"input", std::move(input)}, {"hash", short_hash(filename)}};
-            os << "  " << tuple.dump(-1, ' ', false, nlohmann::json::error_handler_t::ignore);
-            if (--file_count != 0)
-            {
-                os << ",\n";
-            }
-            else
-            {
-                os << "\n";
-            }
-        }
-
-        os << "]" << std::endl;
+        auto slash = filename.find_last_of('/');
+        slash = (slash == std::string::npos) ? 0 : slash + 1;
+        return filename.substr(slash, 7);
     }
 
     /*!
@@ -328,31 +288,31 @@ nlohmann::json fuzzcover_interface<TestInput, TestOutput>::tests;
 
 } // namespace fuzzcover
 
-#define MAKE_MAIN(CLASS_NAME)                                      \
-    namespace fuzzcover {                                          \
-    int fuzz_wrapper(const std::uint8_t* data, std::size_t size)   \
-    {                                                              \
-        CLASS_NAME instance;                                       \
-        instance.fuzz(data, size);                                 \
-        return 0;                                                  \
-    }                                                              \
-                                                                   \
-    void doctest_wrapper()                                         \
-    {                                                              \
-        CLASS_NAME instance;                                       \
-        instance.check(std::is_void<CLASS_NAME::test_output_t>()); \
-    }                                                              \
-    }                                                              \
-                                                                   \
-    TEST_CASE(#CLASS_NAME)                                         \
-    {                                                              \
-        fuzzcover::doctest_wrapper();                              \
-    }                                                              \
-                                                                   \
-    int main(int argc, char** argv)                                \
-    {                                                              \
-        CLASS_NAME instance;                                       \
-        return instance.handle_arguments(argc, argv);              \
+#define MAKE_MAIN(CLASS_NAME)                                    \
+    namespace fuzzcover {                                        \
+    int fuzz_wrapper(const std::uint8_t* data, std::size_t size) \
+    {                                                            \
+        CLASS_NAME instance;                                     \
+        instance.fuzz(data, size);                               \
+        return 0;                                                \
+    }                                                            \
+                                                                 \
+    void doctest_wrapper()                                       \
+    {                                                            \
+        CLASS_NAME instance;                                     \
+        instance.check();                                        \
+    }                                                            \
+    }                                                            \
+                                                                 \
+    TEST_CASE(#CLASS_NAME)                                       \
+    {                                                            \
+        fuzzcover::doctest_wrapper();                            \
+    }                                                            \
+                                                                 \
+    int main(int argc, char** argv)                              \
+    {                                                            \
+        CLASS_NAME instance;                                     \
+        return instance.handle_arguments(argc, argv);            \
     }
 
 // clean up

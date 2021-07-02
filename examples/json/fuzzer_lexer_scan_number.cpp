@@ -24,17 +24,18 @@ class fuzzer_lexer_scan_number : public fuzzcover::fuzzcover_interface<std::stri
         return result;
     }
 
-    void test_function(const test_input_t& value) override
+    test_output_t test_function(const test_input_t& value) override
     {
         if (value.empty())
         {
-            return;
+            return false;
         }
 
         nlohmann::detail::input_adapter ia(value.data(), value.size());
         nlohmann::detail::lexer<nlohmann::json> l(ia);
         l.get();
         l.scan_number();
+        return true;
     }
 };
 

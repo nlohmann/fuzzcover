@@ -10,7 +10,7 @@ class picohash_sha256 : public fuzzcover::fuzzcover_interface<std::string>
         return data_provider.ConsumeRemainingBytesAsString();
     }
 
-    void test_function(const test_input_t& value) override
+    test_output_t test_function(const test_input_t& value) override
     {
         picohash_ctx_t ctx;
         char digest[PICOHASH_SHA256_DIGEST_LENGTH];
@@ -18,6 +18,7 @@ class picohash_sha256 : public fuzzcover::fuzzcover_interface<std::string>
         picohash_init_sha256(&ctx);
         picohash_update(&ctx, value.c_str(), value.size());
         picohash_final(&ctx, digest);
+        return true;
     }
 };
 

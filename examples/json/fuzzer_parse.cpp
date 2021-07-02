@@ -14,14 +14,17 @@ class fuzzer_parse : public fuzzcover::fuzzcover_interface<std::string>
         return data_provider.ConsumeRemainingBytesAsString();
     }
 
-    void test_function(const test_input_t& value) override
+    test_output_t test_function(const test_input_t& value) override
     {
         try
         {
-            nlohmann::json::parse(value);
+            auto j = nlohmann::json::parse(value);
+            return true;
         }
         catch (...)
-        {}
+        {
+            return false;
+        }
     }
 };
 

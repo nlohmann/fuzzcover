@@ -6,7 +6,7 @@
 #include <fuzzcover/fuzzcover.hpp>
 #include <nlohmann/json.hpp>
 
-class fuzzer_serializer_decode : public fuzzcover::fuzzcover_interface<std::tuple<std::uint8_t, std::uint32_t, std::uint8_t>>
+class fuzzer_serializer_decode : public fuzzcover::fuzzcover_interface<std::tuple<std::uint8_t, std::uint32_t, std::uint8_t>, std::set<std::uint8_t>>
 {
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
@@ -20,7 +20,7 @@ class fuzzer_serializer_decode : public fuzzcover::fuzzcover_interface<std::tupl
         return {state, codep, byte};
     }
 
-    void test_function(const test_input_t& value) override
+    test_output_t test_function(const test_input_t& value) override
     {
         std::uint8_t state = std::get<0>(value);
         std::uint32_t codep = std::get<1>(value);
@@ -37,6 +37,8 @@ class fuzzer_serializer_decode : public fuzzcover::fuzzcover_interface<std::tupl
                 break;
             }
         }
+
+        return states_seen;
     }
 };
 

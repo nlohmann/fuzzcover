@@ -5,7 +5,7 @@
 #include <fuzzcover/fuzzcover.hpp>
 #include <nlohmann/json.hpp>
 
-class fuzzer_roundtrip_string : public fuzzcover::fuzzcover_interface<std::tuple<std::string, nlohmann::json::error_handler_t, bool>>
+class fuzzer_roundtrip_string : public fuzzcover::fuzzcover_interface<std::tuple<std::string, nlohmann::json::error_handler_t, bool>, std::string>
 {
   public:
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
@@ -31,14 +31,16 @@ class fuzzer_roundtrip_string : public fuzzcover::fuzzcover_interface<std::tuple
         return {result, error_handler, ensure_ascii};
     }
 
-    void test_function(const test_input_t& value) override
+    test_output_t test_function(const test_input_t& value) override
     {
         try
         {
-            nlohmann::json(std::get<0>(value)).dump(-1, ' ', std::get<2>(value), std::get<1>(value));
+            return nlohmann::json(std::get<0>(value)).dump(-1, ' ', std::get<2>(value), std::get<1>(value));
         }
         catch (...)
-        {}
+        {
+            return "";
+        }
     }
 };
 
