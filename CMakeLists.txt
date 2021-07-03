@@ -1,87 +1,42 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.12.0)
 
-project(fuzzcover VERSION 0.2.0 LANGUAGES CXX)
+project(fuzzcover VERSION 0.3.0 LANGUAGES CXX)
 
-# the actual library
+# compiler checks
+if (NOT CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
+    message(WARNING "Fuzzcover requires Clang as compiler and assumes libFuzzer is available.")
+endif()
+if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+    message(WARNING "The compiler provided by Xcode (AppleClang ${CMAKE_CXX_COMPILER_VERSION}) cannot compile Fuzzcover, because it does not contain libFuzzer. Please install Clang via Homebrew calling 'brew install llvm' and re-run CMake after setting 'CXX=$(brew --prefix llvm)/bin/clang'.")
+endif()
+
+# required headers
+include(CheckIncludeFileCXX)
+check_include_file_cxx(dirent.h FUZZCOVER_HAS_DIRENT_H)
+if (NOT FUZZCOVER_HAS_DIRENT_H)
+    message(WARNING "Header <dirent.h> is required by Fuzzcover, but not found.")
+endif()
+
+# Fuzzcover interface library
 add_library(libfuzzcover INTERFACE)
 target_include_directories(libfuzzcover INTERFACE include)
 target_compile_features(libfuzzcover INTERFACE cxx_std_11)
+target_link_libraries(libfuzzcover INTERFACE -fsanitize=fuzzer -fprofile-instr-generate -fcoverage-mapping)
+target_compile_options(libfuzzcover INTERFACE -fsanitize=fuzzer-no-link -fprofile-instr-generate -fcoverage-mapping)
 
-##############################################################################
+# interactive Fuzzcover suite
+configure_file(tools/fuzzcover.py fuzzcover.py)
 
-# binary that does the actual fuzzing
-add_executable(fuzzer examples/fuzzer.cpp)
-target_include_directories(fuzzer PRIVATE examples/json/include)
-target_compile_options(fuzzer PRIVATE -fsanitize=fuzzer-no-link)
-target_link_libraries(fuzzer PRIVATE -fsanitize=fuzzer libfuzzcover)
+# target to create virtual environment
+include(FindPython3)
+find_package (Python3 COMPONENTS Interpreter)
 
-# binary that executes the test function with the corpus
-add_executable(tester examples/tester.cpp)
-target_include_directories(tester PRIVATE examples/json/include)
-target_compile_options(tester PRIVATE -g -O1 -fprofile-instr-generate -fcoverage-mapping)
-target_link_libraries(tester PRIVATE -fprofile-instr-generate -fcoverage-mapping libfuzzcover)
-
-# binary that dumps the corpus in JSON format
-add_executable(dumper examples/dumper.cpp)
-target_include_directories(dumper PRIVATE examples/json/include)
-target_link_libraries(dumper PRIVATE libfuzzcover)
-
-##############################################################################
-
-# the path where the fuzzer generates the corpus
-set(CORPUS_DIRECTORY ${CMAKE_BINARY_DIR}/corpus)
-
-add_custom_target(run_fuzzer
-    COMMAND ${CMAKE_COMMAND} -E make_directory ${CORPUS_DIRECTORY}
-    #COMMAND ${CMAKE_CURRENT_BINARY_DIR}/fuzzer -jobs=64 -workers=8 ${CORPUS_DIRECTORY}
-    COMMAND ${CMAKE_CURRENT_BINARY_DIR}/fuzzer ${CORPUS_DIRECTORY}
-    COMMENT "running fuzzer"
-)
-add_dependencies(run_fuzzer fuzzer)
-
-add_custom_target(minimize_corpus_files
-    COMMAND ${CMAKE_COMMAND} -E make_directory new_corpus
-    COMMAND fuzzer new_corpus ${CORPUS_DIRECTORY} -merge=1
-    COMMAND ${CMAKE_COMMAND} -E remove_directory ${CORPUS_DIRECTORY}
-    COMMAND ${CMAKE_COMMAND} -E rename new_corpus ${CORPUS_DIRECTORY}
-    COMMAND ${CMAKE_SOURCE_DIR}/tools/minimize_corpus_files.py ${CORPUS_DIRECTORY}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "minimizing corpus files"
+add_custom_target(fuzzcover_suite
+    COMMAND ${Python3_EXECUTABLE} -mvenv venv
+    COMMAND venv/bin/pip3 install -r ${CMAKE_SOURCE_DIR}/tools/requirements.txt
+    WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+    COMMENT "Installing virtual environment"
 )
 
-add_custom_target(minimize_corpus_length
-    COMMAND ${CMAKE_SOURCE_DIR}/tools//minimize_corpus_length.py ${CORPUS_DIRECTORY}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "minimizing corpus length"
-)
-
-add_custom_target(check_coverage
-    COMMAND tester ${CORPUS_DIRECTORY}/*
-    COMMAND llvm-profdata merge -sparse default.profraw -o default.profdata
-    COMMAND llvm-cov report ./tester -instr-profile=default.profdata
-    COMMAND llvm-cov show ./tester -instr-profile=default.profdata --format=html > coverage.html
-
-    COMMAND llvm-cov export ./tester -instr-profile=default.profdata --format=lcov > coverage.info
-    COMMAND lcov --summary coverage.info
-    COMMAND genhtml coverage.info -o html
-
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "collect coverage"
-)
-add_dependencies(check_coverage tester)
-
-add_custom_target(check_coverage_fast
-    COMMAND tester ${CORPUS_DIRECTORY}/*
-    COMMAND llvm-profdata merge -sparse default.profraw -o default.profdata
-    COMMAND llvm-cov report ./tester -instr-profile=default.profdata
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "collect coverage"
-)
-add_dependencies(check_coverage_fast tester)
-
-add_custom_target(dump_corpus
-    COMMAND dumper ${CORPUS_DIRECTORY}/*
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT "dump corpus"
-)
-add_dependencies(dump_corpus dumper)
+# examples
+add_subdirectory(examples EXCLUDE_FROM_ALL)

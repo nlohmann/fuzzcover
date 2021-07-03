@@ -1,0 +1,4 @@
+colorful>=0.5.4
+prompt-toolkit>=1.0.14
+PyInquirer==1.0.3
+tqdm>=4.61.1

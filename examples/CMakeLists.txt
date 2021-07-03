@@ -1,0 +1,54 @@
+# JSON
+
+add_executable(fuzzer_lexer_scan json/fuzzer_lexer_scan.cpp)
+target_link_libraries(fuzzer_lexer_scan PRIVATE libfuzzcover)
+
+add_executable(fuzzer_to_chars json/fuzzer_to_chars.cpp)
+target_link_libraries(fuzzer_to_chars PRIVATE libfuzzcover)
+
+add_executable(fuzzer_serializer_dump_integer json/fuzzer_serializer_dump_integer.cpp)
+target_link_libraries(fuzzer_serializer_dump_integer PRIVATE libfuzzcover)
+
+add_executable(fuzzer_lexer_scan_number json/fuzzer_lexer_scan_number.cpp)
+target_link_libraries(fuzzer_lexer_scan_number PRIVATE libfuzzcover)
+
+add_executable(fuzzer_lexer_scan_string json/fuzzer_lexer_scan_string.cpp)
+target_link_libraries(fuzzer_lexer_scan_string PRIVATE libfuzzcover)
+
+add_executable(fuzzer_serializer_decode json/fuzzer_serializer_decode.cpp)
+target_link_libraries(fuzzer_serializer_decode PRIVATE libfuzzcover)
+
+add_executable(fuzzer_roundtrip_string json/fuzzer_roundtrip_string.cpp)
+target_link_libraries(fuzzer_roundtrip_string PRIVATE libfuzzcover)
+
+add_executable(fuzzer_parse json/fuzzer_parse.cpp)
+target_link_libraries(fuzzer_parse PRIVATE libfuzzcover)
+
+add_executable(fuzzer_serializer_dump_float json/fuzzer_serializer_dump_float.cpp)
+target_link_libraries(fuzzer_serializer_dump_float PRIVATE libfuzzcover)
+
+# Ramer-Douglas-Peucker
+
+add_executable(fuzzer_ramer_douglas_peucker ramer-douglas-peucker/ramer_douglas_peucker_fuzz.cpp)
+target_link_libraries(fuzzer_ramer_douglas_peucker PRIVATE libfuzzcover)
+
+# IBAN
+
+add_executable(fuzzer_iban iban/iban_fuzz.cpp)
+target_link_libraries(fuzzer_iban PRIVATE libfuzzcover)
+
+# Spell Number
+
+add_executable(fuzzer_spellnumber spellnumber/spell_number_fuzz.cpp)
+target_link_libraries(fuzzer_spellnumber PRIVATE libfuzzcover)
+
+# Picohash
+
+add_executable(fuzzer_picohash_md5 picohash/picohash_md5.cpp)
+target_link_libraries(fuzzer_picohash_md5 PRIVATE libfuzzcover)
+
+add_executable(fuzzer_picohash_sha1 picohash/picohash_sha1.cpp)
+target_link_libraries(fuzzer_picohash_sha1 PRIVATE libfuzzcover)
+
+add_executable(fuzzer_picohash_sha256 picohash/picohash_sha256.cpp)
+target_link_libraries(fuzzer_picohash_sha256 PRIVATE libfuzzcover)
