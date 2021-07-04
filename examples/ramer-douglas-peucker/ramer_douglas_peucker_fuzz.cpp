@@ -12,8 +12,8 @@ class ramer_douglas_peucker_fuzz : public fuzzcover::fuzzcover_interface<std::tu
         std::vector<Point> points;
         while (data_provider.remaining_bytes() > 0)
         {
-            points.emplace_back(data_provider.ConsumeFloatingPointInRange<double>(-5.0, 5.0),
-                                data_provider.ConsumeFloatingPointInRange<double>(-5.0, 5.0));
+            points.emplace_back(data_provider.ConsumeFloatingPointInRange<double>(-180.0, 180.0),
+                                data_provider.ConsumeFloatingPointInRange<double>(-90.0, 90.0));
         }
 
         return {points, epsilon};
