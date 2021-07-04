@@ -1,7 +1,5 @@
 #define private public
 
-#include <cmath>
-#include <cstring>
 #include <fuzzcover/fuzzcover.hpp>
 #include <nlohmann/json.hpp>
 
