@@ -7,7 +7,7 @@ class roman_fuzz : public fuzzcover::fuzzcover_interface<unsigned long, std::str
     test_input_t value_from_bytes(const std::uint8_t* data, std::size_t size) override
     {
         FuzzedDataProvider data_provider(data, size);
-        return data_provider.ConsumeIntegralInRange<unsigned long>(0, 1000000000);
+        return data_provider.ConsumeIntegralInRange<unsigned long>(0, 10000000000);
     }
 
     test_output_t test_function(const test_input_t& value) override
