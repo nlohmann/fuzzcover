@@ -278,7 +278,7 @@ def dump(filename=None):
 # show coverage report
 #############################################################################
 
-def show_coverage():
+def show_coverage(open_browser=True):
     """
     create coverage report and open it in default browser
     """
@@ -296,8 +296,10 @@ def show_coverage():
                 stdout=info_output)
         subprocess.check_output(
             ['genhtml', '--branch-coverage', info_file, '--output-directory', CORPUS_DIRECTORY + '_coverage'])
-        webbrowser.get().open_new(
-            'file://' + os.path.realpath(os.path.join(CORPUS_DIRECTORY + '_coverage', 'index.html')))
+
+        if open_browser:
+            webbrowser.get().open_new(
+                'file://' + os.path.realpath(os.path.join(CORPUS_DIRECTORY + '_coverage', 'index.html')))
 
 
 #############################################################################
@@ -399,6 +401,7 @@ def main_menu():
 
         elif answers['main_menu'] == 'Start fuzzing':
             fuzz_menu()
+            show_coverage(open_browser=False)
 
         elif answers['main_menu'] == 'Dump corpus':
             dump(filename=None)
@@ -411,6 +414,7 @@ def main_menu():
 
         elif answers['main_menu'] == 'Reduce corpus':
             reduce_corpus()
+            show_coverage(open_browser=False)
 
         elif answers['main_menu'] == 'Clear corpus':
             confirm = prompt([{
@@ -424,6 +428,7 @@ def main_menu():
 
         elif answers['main_menu'] == 'I\'m feeling lucky':
             lucky()
+            show_coverage(open_browser=False)
 
         print()
 
