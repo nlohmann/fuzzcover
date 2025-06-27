@@ -14,7 +14,6 @@ Fuzzcover relies on several tools which can be easily installed on most operatin
 
 - [Clang](http://clang.llvm.org) - we need Clang's [source-based code coverage](https://clang.llvm.org/docs/SourceBasedCodeCoverage.html) and [libFuzzer](http://libfuzzer.info) which are both part of a Clang installation. The binaries `llvm-profdata` and `llvm-cov` must be available in your path.
 - [Python](https://www.python.org) - we use Python 3 and [several modules](tools/requirements.txt) for the interactive Fuzzcover suite.
-- [lcov](http://ltp.sourceforge.net/coverage/lcov.php) - we use lcov to generate HTML views of your code coverage. The binary `genhtml` must be found in your path.
 
 To use the interactive Fuzzcover suite, you need to install the dependencies via:
 
