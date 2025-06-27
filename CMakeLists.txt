@@ -29,7 +29,7 @@ configure_file(tools/fuzzcover.py fuzzcover.py)
 
 # target to create virtual environment
 include(FindPython3)
-find_package (Python3 COMPONENTS Interpreter)
+find_package(Python3 COMPONENTS Interpreter)
 
 add_custom_target(fuzzcover_suite
     COMMAND ${Python3_EXECUTABLE} -mvenv venv
